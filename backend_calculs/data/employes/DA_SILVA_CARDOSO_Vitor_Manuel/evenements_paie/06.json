@@ -1,0 +1,86 @@
+{
+  "periode": {
+    "annee": 2025,
+    "mois": 6
+  },
+  "calendrier_analyse": [
+    {
+      "jour": 1,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 6
+    },
+    {
+      "jour": 7,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 6
+    },
+    {
+      "jour": 8,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 6
+    },
+    {
+      "jour": 9,
+      "type": "ferie",
+      "heures": 3.0
+    },
+    {
+      "jour": 15,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 6
+    },
+    {
+      "jour": 21,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 6
+    },
+    {
+      "jour": 22,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 6
+    },
+    {
+      "jour": 23,
+      "type": "absence_non_remuneree",
+      "heures": 3.0
+    },
+    {
+      "jour": 24,
+      "type": "absence_non_remuneree",
+      "heures": 3.0
+    },
+    {
+      "jour": 25,
+      "type": "absence_non_remuneree",
+      "heures": 3.0
+    },
+    {
+      "jour": 26,
+      "type": "absence_non_remuneree",
+      "heures": 3.0
+    },
+    {
+      "jour": 27,
+      "type": "absence_non_remuneree",
+      "heures": 3.0
+    },
+    {
+      "jour": 28,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 6
+    },
+    {
+      "jour": 29,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 6
+    }
+  ]
+}

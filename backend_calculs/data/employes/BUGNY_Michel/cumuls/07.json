@@ -1,0 +1,15 @@
+{
+  "_commentaire": "Cumuls pour Michel BUGNY au 30 Juin 2025. Fichier généré à partir des 6 bulletins de paie.",
+  "periode": {
+    "annee_en_cours": 2025,
+    "dernier_mois_calcule": 7
+  },
+  "cumuls": {
+    "brut_total": 18342.51,
+    "heures_remunerees": 1037.25,
+    "reduction_generale_patronale": -2402.24,
+    "net_imposable": 12631.98,
+    "impot_preleve_a_la_source": 397.01,
+    "heures_supplementaires_remunerees": 677.79
+  }
+}

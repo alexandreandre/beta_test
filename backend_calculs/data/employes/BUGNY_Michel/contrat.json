@@ -1,0 +1,82 @@
+{
+  "salarie": {
+    "nom": "Bugny",
+    "prenom": "Michel",
+    "nir": "123123123123123",
+    "date_naissance": "1990-01-01",
+    "lieu_naissance": "75001 Paris",
+    "nationalite": "Française",
+    "adresse": {
+      "rue": "13 RUE DE LA TRANQUILLITE",
+      "ville": "FRENEUSE",
+      "code_postal": "76410"
+    },
+    "coordonnees_bancaires": {
+      "bic": "18761876",
+      "iban": "FR76187618761876"
+    }
+  },
+  "contrat": {
+    "date_entree": "2022-12-01",
+    "type_contrat": "CDI",
+    "statut": "Non-Cadre",
+    "emploi": "Logisticien Polyvalent",
+    "periode_essai": null,
+    "temps_travail": {
+      "is_temps_partiel": false,
+      "duree_hebdomadaire": 39.0
+    }
+  },
+  "remuneration": {
+    "salaire_de_base": {
+      "valeur": 2365.66
+    },
+    "classification_conventionnelle": {
+      "coefficient": 240,
+      "classe_emploi": 6,
+      "groupe_emploi": "C"
+    },
+    "elements_variables": null,
+    "avantages_en_nature": {
+      "repas": {
+        "nombre_par_mois": 0
+      },
+      "logement": {
+        "beneficie": false
+      },
+      "vehicule": {
+        "beneficie": false
+      }
+    }
+  },
+  "specificites_paie": {
+    "mutuelle": {
+      "adhesion": true,
+      "lignes_specifiques": [
+        {
+          "id": "mutuelle_1",
+          "libelle": "Mutelle Salarié Seul",
+          "montant_patronal": 31.57,
+          "montant_salarial": 31.58,
+          "part_patronale_soumise_a_csg": true
+        }
+      ]
+    },
+    "transport": {
+      "abonnement_mensuel_total": 0
+    },
+    "prevoyance": {
+      "adhesion": true,
+      "lignes_specifiques": []
+    },
+    "is_alsace_moselle": false,
+    "titres_restaurant": {
+      "beneficie": true,
+      "nombre_par_mois": 0
+    },
+    "prelevement_a_la_source": {
+      "taux": 3.4,
+      "is_personnalise": true
+    }
+  }
+}

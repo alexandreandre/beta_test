@@ -1,0 +1,14 @@
+{
+  "_commentaire": "Cumuls pour Anthony ESPINOSA au 30 Juin 2025, générés à partir des bulletins de paie.",
+  "periode": {
+    "annee_en_cours": 2025,
+    "dernier_mois_calcule": 6
+  },
+  "cumuls": {
+    "brut_total": 14165.59,
+    "heures_remunerees": 862.95,
+    "reduction_generale_patronale": -1419.39,
+    "net_imposable": 11253.41,
+    "impot_preleve_a_la_source": 0.00
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "salarie": {
+    "nom": "Andre",
+    "prenom": "Frederic",
+    "nir": "123123123123123",
+    "date_naissance": "1967-04-29",
+    "lieu_naissance": "13008 Marseille",
+    "nationalite": "Française",
+    "adresse": {
+      "rue": "13 RUE DE LA TRANQUILLITE",
+      "code_postal": "76410",
+      "ville": "FRENEUSE"
+    },
+    "coordonnees_bancaires": {
+      "iban": "FR76 1987198719871987",
+      "bic": "19871987"
+    }
+  },
+  "contrat": {
+    "date_entree": "2020-10-10",
+    "type_contrat": "CDI",
+    "statut": "Non-Cadre",
+    "emploi": "Numéro 10",
+    "periode_essai": null,
+    "temps_travail": {
+      "is_temps_partiel": false,
+      "duree_hebdomadaire": 39.0
+    }
+  },
+  "remuneration": {
+    "salaire_de_base": {
+      "valeur": 2365.66
+    },
+    "classification_conventionnelle": {
+      "groupe_emploi": "C",
+      "classe_emploi": 6,
+      "coefficient": 240
+    },
+    "elements_variables": null,
+    "avantages_en_nature": {
+      "repas": {
+        "nombre_par_mois": 0
+      },
+      "logement": {
+        "beneficie": false
+      },
+      "vehicule": {
+        "beneficie": false
+      }
+    }
+  },
+  "specificites_paie": {
+    "is_alsace_moselle": false,
+    "prelevement_a_la_source": {
+      "is_personnalise": false,
+      "taux": 0
+    },
+    "transport": {
+      "abonnement_mensuel_total": 0
+    },
+    "titres_restaurant": {
+      "beneficie": true,
+      "nombre_par_mois": 0
+    },
+    "mutuelle": {
+      "adhesion": false,
+      "lignes_specifiques": []
+    },
+    "prevoyance": {
+      "adhesion": false,
+      "lignes_specifiques": []
+    }
+  }
+}

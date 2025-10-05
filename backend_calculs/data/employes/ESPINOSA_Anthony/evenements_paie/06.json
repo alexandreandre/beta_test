@@ -1,0 +1,81 @@
+{
+  "periode": {
+    "annee": 2025,
+    "mois": 6
+  },
+  "calendrier_analyse": [
+    {
+      "jour": 1,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 6
+    },
+    {
+      "jour": 7,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 6
+    },
+    {
+      "jour": 8,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 6
+    },
+    {
+      "jour": 9,
+      "type": "ferie",
+      "heures": 8.0
+    },
+    {
+      "jour": 13,
+      "type": "travail_hs25",
+      "heures": 1.0
+    },
+    {
+      "jour": 14,
+      "type": "travail_hs25",
+      "heures": 3.0
+    },
+    {
+      "jour": 14,
+      "type": "travail_hs50",
+      "heures": 4.0
+    },
+    {
+      "jour": 15,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 6
+    },
+    {
+      "jour": 21,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 6
+    },
+    {
+      "jour": 22,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 6
+    },
+    {
+      "jour": 27,
+      "type": "travail_hs25",
+      "heures": 3.5
+    },
+    {
+      "jour": 28,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 6
+    },
+    {
+      "jour": 29,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 6
+    }
+  ]
+}

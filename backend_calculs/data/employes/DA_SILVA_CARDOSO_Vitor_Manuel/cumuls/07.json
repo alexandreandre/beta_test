@@ -1,0 +1,15 @@
+{
+  "_commentaire": "Cumuls pour Vitor Manuel DA SILVA CARDOSO au 30 Juin 2025.",
+  "periode": {
+    "annee_en_cours": 2025,
+    "dernier_mois_calcule": 7
+  },
+  "cumuls": {
+    "brut_total": 1437.48,
+    "heures_remunerees": 71.0,
+    "reduction_generale_patronale": -451.8,
+    "net_imposable": 1178.85,
+    "impot_preleve_a_la_source": 0.0,
+    "heures_supplementaires_remunerees": 0.0
+  }
+}

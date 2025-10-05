@@ -1,0 +1,14 @@
+{
+  "_commentaire": "Cumuls pour Fabrice GIRERD au 30 Juin 2025, générés à partir des bulletins de paie.",
+  "periode": {
+    "annee_en_cours": 2025,
+    "dernier_mois_calcule": 6
+  },
+  "cumuls": {
+    "brut_total": 22066.66,
+    "heures_remunerees": 994.50,
+    "reduction_generale_patronale": 0.00,
+    "net_imposable": 15484.34,
+    "impot_preleve_a_la_source": 477.98
+  }
+}

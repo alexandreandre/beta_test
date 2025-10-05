@@ -1,0 +1,82 @@
+{
+  "salarie": {
+    "nom": "André",
+    "prenom": "Elsa",
+    "nir": "123123123123123",
+    "date_naissance": "1998-04-13",
+    "lieu_naissance": "13008 Marseille",
+    "nationalite": "Française",
+    "adresse": {
+      "rue": "13 RUE DE LA TRANQUILLITE",
+      "ville": "FRENEUSE",
+      "code_postal": "76410"
+    },
+    "coordonnees_bancaires": {
+      "bic": "168716871",
+      "iban": "FR761876187618761"
+    }
+  },
+  "contrat": {
+    "date_entree": "2025-01-01",
+    "type_contrat": "CDI",
+    "statut": "Cadre",
+    "emploi": "Gérante d'usine",
+    "periode_essai": null,
+    "temps_travail": {
+      "is_temps_partiel": false,
+      "duree_hebdomadaire": 35.0
+    }
+  },
+  "remuneration": {
+    "salaire_de_base": {
+      "valeur": 2365.66
+    },
+    "classification_conventionnelle": {
+      "coefficient": 240,
+      "classe_emploi": 6,
+      "groupe_emploi": "C"
+    },
+    "elements_variables": null,
+    "avantages_en_nature": {
+      "repas": {
+        "nombre_par_mois": 0
+      },
+      "logement": {
+        "beneficie": false
+      },
+      "vehicule": {
+        "beneficie": false
+      }
+    }
+  },
+  "specificites_paie": {
+    "mutuelle": {
+      "adhesion": true,
+      "lignes_specifiques": [
+        {
+          "id": "mutuelle_1",
+          "libelle": "Mutelle Salarié Seul",
+          "montant_patronal": 31.58,
+          "montant_salarial": 31.57,
+          "part_patronale_soumise_a_csg": true
+        }
+      ]
+    },
+    "transport": {
+      "abonnement_mensuel_total": 0
+    },
+    "prevoyance": {
+      "adhesion": true,
+      "lignes_specifiques": []
+    },
+    "is_alsace_moselle": false,
+    "titres_restaurant": {
+      "beneficie": true,
+      "nombre_par_mois": 0
+    },
+    "prelevement_a_la_source": {
+      "taux": 2,
+      "is_personnalise": true
+    }
+  }
+}

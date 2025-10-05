@@ -1,0 +1,64 @@
+{
+  "salarie": {
+    "nom": "Andre",
+    "prenom": "Alexandre",
+    "nir": "123123123123123",
+    "date_naissance": "2004-07-24",
+    "lieu_naissance": "75001 Paris",
+    "nationalite": "Française",
+    "adresse": {
+      "rue": "13 RUE DE LA TRANQUILLITE",
+      "code_postal": "76410",
+      "ville": "FRENEUSE"
+    },
+    "coordonnees_bancaires": {
+      "iban": "FR76 187187618761876",
+      "bic": "18761876"
+    }
+  },
+  "contrat": {
+    "date_entree": "2025-10-02",
+    "type_contrat": "CDI",
+    "statut": "Non-Cadre",
+    "emploi": "Président",
+    "periode_essai": null,
+    "temps_travail": {
+      "is_temps_partiel": false,
+      "duree_hebdomadaire": 39.0
+    }
+  },
+  "remuneration": {
+    "salaire_de_base": {
+      "valeur": 2365.66
+    },
+    "classification_conventionnelle": {
+      "groupe_emploi": "C",
+      "classe_emploi": 6,
+      "coefficient": 240
+    },
+    "elements_variables": null,
+    "avantages_en_nature": null
+  },
+  "specificites_paie": {
+    "is_alsace_moselle": false,
+    "prelevement_a_la_source": {
+      "is_personnalise": true,
+      "taux": 2
+    },
+    "transport": {
+      "abonnement_mensuel_total": 0
+    },
+    "titres_restaurant": {
+      "beneficie": true,
+      "nombre_par_mois": 0
+    },
+    "mutuelle": {
+      "selected_ids": [
+        "mutuelle_salarié_seul"
+      ]
+    },
+    "prevoyance": {
+      "selected_ids": []
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "periode": {
+    "annee": 2025,
+    "mois": 6
+  },
+  "calendrier_analyse": [
+    {
+      "jour": 6,
+      "type": "absence_injustifiee_hs25",
+      "heures": 3.0
+    },
+    {
+      "jour": 23,
+      "type": "absence_injustifiee_base",
+      "heures": 0.67
+    },
+    {
+      "jour": 26,
+      "type": "absence_injustifiee_base",
+      "heures": 0.23
+    }
+  ]
+}

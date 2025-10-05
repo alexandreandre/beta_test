@@ -1,0 +1,16 @@
+# saas-rh-backend/requirements.txt
+
+# --- Core API Framework ---
+fastapi
+uvicorn[standard]
+
+# --- Database & Storage ---
+supabase
+python-dotenv
+
+# --- Asynchronous Task Queue (NEW) ---
+dramatiq[redis]
+redis
+
+# --- Utilities ---
+requests

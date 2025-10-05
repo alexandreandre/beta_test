@@ -1,0 +1,61 @@
+{
+  "periode": {
+    "annee": 2025,
+    "mois": 7
+  },
+  "calendrier_analyse": [
+    {
+      "jour": 5,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 7
+    },
+    {
+      "jour": 6,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 7
+    },
+    {
+      "jour": 12,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 7
+    },
+    {
+      "jour": 13,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 7
+    },
+    {
+      "jour": 14,
+      "type": "ferie",
+      "heures": 3.0
+    },
+    {
+      "jour": 19,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 7
+    },
+    {
+      "jour": 20,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 7
+    },
+    {
+      "jour": 26,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 7
+    },
+    {
+      "jour": 27,
+      "type": "weekend",
+      "annee": 2025,
+      "mois": 7
+    }
+  ]
+}
