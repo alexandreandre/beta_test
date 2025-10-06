@@ -21,6 +21,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from supabase import create_client, Client
+import payroll_analyzer
 
 print("--- LECTURE DU FICHIER main.py ---")
 
@@ -52,8 +53,22 @@ if not supabase_url or not supabase_key:
 supabase: Client = create_client(supabase_url, supabase_key)
 
 # --- Constantes ---
-PATH_TO_PAYROLL_ENGINE = Path("../Bulletin_de_paie")
+# Chemin vers le fichier actuel (main.py)
+# -> /Users/alex/Desktop/Client_MAJI/SIRH/beta_test/backend_api/main.py
+CURRENT_FILE_PATH = Path(__file__).resolve()
 
+# Chemin vers le dossier qui contient main.py (backend_api)
+# -> /Users/alex/Desktop/Client_MAJI/SIRH/beta_test/backend_api
+API_DIR = CURRENT_FILE_PATH.parent
+
+# Chemin vers le dossier parent qui contient backend_api ET Bulletin_de_paie
+# -> /Users/alex/Desktop/Client_MAJI/SIRH/beta_test
+PROJECT_ROOT = API_DIR.parent
+
+# On construit le chemin absolu et fiable vers le moteur de paie
+PATH_TO_PAYROLL_ENGINE = PROJECT_ROOT / "backend_calculs"
+
+print(f"INFO: Chemin calculé pour le moteur de paie : {PATH_TO_PAYROLL_ENGINE}")
 print("--- INITIALISATION TERMINÉE ---")
 
 # ==============================================================================
@@ -148,6 +163,36 @@ class PayslipInfo(BaseModel):
     month: int
     year: int
     url: str
+
+
+
+class PlannedCalendarEntry(BaseModel):
+    jour: int
+    type: str
+    heures_prevues: float | None = None
+
+class PlannedCalendarRequest(BaseModel):
+    year: int
+    month: int
+    calendrier_prevu: List[PlannedCalendarEntry]
+
+class ActualHoursEntry(BaseModel):
+    jour: int
+    heures_faites: float | None = None
+    type: str | None = None 
+
+class ActualHoursRequest(BaseModel):
+    year: int
+    month: int
+    calendrier_reel: List[ActualHoursEntry]
+
+# --- Ajoutez ce modèle Pydantic ---
+class MonthlyInputsRequest(BaseModel):
+    year: int
+    month: int
+    primes: List[Dict[str, Any]] | None = None
+    notes_de_frais: List[Dict[str, Any]] | None = None
+    acompte: float | None = None
 
 # ==============================================================================
 # 4. ENDPOINTS DE L'API
@@ -298,63 +343,81 @@ def get_contribution_rates():
 
 # --- Actions (Génération, suppression de bulletins) ---
 
+# saas-rh-backend/main.py -> Remplacer la fonction generate_payslip
+
+
+
 @app.post("/api/actions/generate-payslip")
 def generate_payslip(request: PayslipRequest):
-    """ Exécute le moteur de paie pour générer un bulletin. """
+    """
+    Workflow final qui utilise les événements de paie pré-calculés depuis Supabase.
+    """
     try:
-        # 1. Récupérer le nom du dossier de l'employé
-        emp_response = supabase.table('employees').select("employee_folder_name").eq('id', request.employee_id).single().execute()
-        if not emp_response.data:
-            raise HTTPException(status_code=404, detail="Employé non trouvé.")
-        employee_folder = emp_response.data['employee_folder_name']
+        employee_id = request.employee_id
+        year = request.year
+        month = request.month
+        
+        # --- MODIFIÉ ---
+        # 1. Récupérer les données nécessaires : le nom du dossier et les ÉVÉNEMENTS PRÉ-CALCULÉS
+        employee_data = supabase.table('employees').select("employee_folder_name").eq('id', employee_id).single().execute().data
+        schedule_data = supabase.table('employee_schedules').select("payroll_events") \
+            .match({'employee_id': employee_id, 'year': year, 'month': month}) \
+            .single().execute().data
 
-        # 2. Exécuter le script de paie
+        # On vérifie que les données existent ET que le calcul a bien été fait
+        if not employee_data:
+            raise HTTPException(status_code=404, detail="Employé non trouvé.")
+        if not schedule_data or not schedule_data.get('payroll_events'):
+            raise HTTPException(status_code=400, detail="Les événements de paie n'ont pas encore été calculés pour cette période. Veuillez enregistrer le calendrier d'abord.")
+        
+        employee_folder = employee_data['employee_folder_name']
+        payroll_events_json = schedule_data['payroll_events']
+
+        # --- SIMPLIFIÉ ---
+        # 2. Écrire l'unique fichier JSON temporaire dont le script a besoin
+        employee_path = PATH_TO_PAYROLL_ENGINE / "data" / "employes" / employee_folder
+        events_dir = employee_path / "evenements_paie"
+        events_dir.mkdir(parents=True, exist_ok=True)
+        (events_dir / f"{month:02d}.json").write_text(json.dumps(payroll_events_json, indent=2, ensure_ascii=False), encoding='utf-8')
+        
+        # Le reste de la logique est inchangé
+        
+        # 3. Exécuter le script de paie
         script_path = str(PATH_TO_PAYROLL_ENGINE / "generateur_fiche_paie.py")
-        command = [sys.executable, script_path, employee_folder, str(request.year), str(request.month)]
+        command = [sys.executable, script_path, employee_folder, str(year), str(month)]
         proc = subprocess.run(command, capture_output=True, text=True, cwd=PATH_TO_PAYROLL_ENGINE, check=False)
 
         if proc.returncode != 0:
             raise HTTPException(status_code=500, detail=f"Le script de paie a échoué: {proc.stderr}")
 
-        # 3. Capturer le JSON de sortie du script
-        try:
-            payslip_json_data = json.loads(proc.stdout)
-        except json.JSONDecodeError:
-            raise HTTPException(status_code=500, detail="La sortie du script de paie n'est pas un JSON valide.")
-
-        # 4. Téléverser le PDF sur Supabase Storage
-        pdf_name = f"Bulletin_{employee_folder}_{request.month:02d}-{request.year}.pdf"
-        local_pdf_path = PATH_TO_PAYROLL_ENGINE / "data" / "employes" / employee_folder / "bulletins" / pdf_name
+        # 4. Traiter la sortie et uploader les résultats
+        payslip_json_data = json.loads(proc.stdout)
+        pdf_name = f"Bulletin_{employee_folder}_{month:02d}-{year}.pdf"
+        local_pdf_path = employee_path / "bulletins" / pdf_name
         storage_path = f"{employee_folder}/{pdf_name}"
 
         with open(local_pdf_path, 'rb') as f:
             supabase.storage.from_("bulletins-de-paie").upload(
-                path=storage_path,
-                file=f,
-                file_options={"x-upsert": "true", "content-type": "application/pdf"}
+                path=storage_path, file=f, file_options={"x-upsert": "true"}
             )
 
-        # 5. Sauvegarder les informations dans la table 'payslips'
         supabase.table('payslips').upsert({
-            "employee_id": request.employee_id,
-            "month": request.month,
-            "year": request.year,
-            "payslip_data": payslip_json_data,
-            "pdf_storage_path": storage_path,
+            "employee_id": employee_id, "month": month, "year": year,
+            "payslip_data": payslip_json_data, "pdf_storage_path": storage_path,
         }).execute()
-
-        # 6. Créer une URL signée pour le retour
-        signed_url_response = supabase.storage.from_("bulletins-de-paie").create_signed_url(storage_path, 3600)
-
+        
+        signed_url_response = supabase.storage.from_("bulletins-de-paie").create_signed_url(storage_path, 3600, options={'download': True})
+        
         return {
             "status": "success",
-            "message": "Bulletin généré et sauvegardé avec succès.",
+            "message": "Bulletin généré avec succès.",
             "download_url": signed_url_response['signedURL']
         }
+
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-
+    
 @app.delete("/api/payslips/{payslip_id}", status_code=204)
 def delete_payslip(payslip_id: str):
     """ Supprime un bulletin de paie de la BDD et du stockage. """
@@ -374,6 +437,8 @@ def delete_payslip(payslip_id: str):
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+    
+
 
 
 # --- Gestion des documents (Bulletins, Contrats, Calendriers) ---
@@ -507,3 +572,274 @@ def debug_storage_file(employee_id: str, year: int, month: int):
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+
+@app.get("/api/employees/{employee_id}/planned-calendar", response_model=PlannedCalendarRequest)
+def get_planned_calendar(employee_id: str, year: int, month: int):
+    """ Récupère le calendrier prévu depuis la table employee_schedules. """
+    try:
+        response = supabase.table('employee_schedules').select("planned_calendar") \
+            .match({'employee_id': employee_id, 'year': year, 'month': month}) \
+            .maybe_single().execute()
+
+        # --- DÉBOGAGE AJOUTÉ ---
+        print(f"DEBUG (planned): Réponse brute de Supabase: {response}")
+
+        # --- CORRECTION DE ROBUSTESSE AJOUTÉE ---
+        # On vérifie si l'objet response lui-même est None avant toute autre chose
+        if response is None:
+            print("AVERTISSEMENT (planned): La réponse de Supabase est None. On retourne un calendrier vide.")
+            return {"year": year, "month": month, "calendrier_prevu": []}
+
+        if not response.data or not response.data.get('planned_calendar'):
+            return {"year": year, "month": month, "calendrier_prevu": []}
+            
+        return {
+            "year": year, 
+            "month": month, 
+            "calendrier_prevu": response.data['planned_calendar'].get('calendrier_prevu', [])
+        }
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
+
+@app.post("/api/employees/{employee_id}/planned-calendar", status_code=200)
+def update_planned_calendar(employee_id: str, payload: PlannedCalendarRequest):
+    """ Met à jour (ou crée) le calendrier prévu dans la table employee_schedules. """
+    try:
+        json_content = {
+            "periode": {"mois": payload.month, "annee": payload.year},
+            "calendrier_prevu": [entry.model_dump() for entry in payload.calendrier_prevu]
+        }
+        
+        # Upsert fait tout le travail : crée la ligne si elle n'existe pas, ou la met à jour si elle existe.
+        supabase.table('employee_schedules').upsert({
+            "employee_id": employee_id,
+            "year": payload.year,
+            "month": payload.month,
+            "planned_calendar": json_content
+        }, on_conflict="employee_id, year, month").execute()
+
+        return {"status": "success", "message": "Planning prévisionnel enregistré."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- GESTION DES HEURES RÉELLES ---
+
+@app.get("/api/employees/{employee_id}/actual-hours", response_model=ActualHoursRequest)
+def get_actual_hours(employee_id: str, year: int, month: int):
+    """ Récupère les heures réelles depuis la table employee_schedules. """
+    try:
+        response = supabase.table('employee_schedules').select("actual_hours") \
+            .match({'employee_id': employee_id, 'year': year, 'month': month}) \
+            .maybe_single().execute()
+
+        # --- DÉBOGAGE AJOUTÉ ---
+        print(f"DEBUG (actual): Réponse brute de Supabase: {response}")
+
+        # --- CORRECTION DE ROBUSTESSE AJOUTÉE ---
+        if response is None:
+            print("AVERTISSEMENT (actual): La réponse de Supabase est None. On retourne un calendrier vide.")
+            return {"year": year, "month": month, "calendrier_reel": []}
+            
+        if not response.data or not response.data.get('actual_hours'):
+            return {"year": year, "month": month, "calendrier_reel": []}
+            
+        return {
+            "year": year, 
+            "month": month, 
+            "calendrier_reel": response.data['actual_hours'].get('calendrier_reel', [])
+        }
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
+    
+@app.post("/api/employees/{employee_id}/actual-hours", status_code=200)
+def update_actual_hours(employee_id: str, payload: ActualHoursRequest):
+    """ Met à jour (ou crée) les heures réelles dans la table employee_schedules. """
+    try:
+        json_content = {
+            "periode": {"mois": payload.month, "annee": payload.year},
+            "calendrier_reel": [entry.model_dump() for entry in payload.calendrier_reel]
+        }
+        
+        supabase.table('employee_schedules').upsert({
+            "employee_id": employee_id,
+            "year": payload.year,
+            "month": payload.month,
+            "actual_hours": json_content
+        }, on_conflict="employee_id, year, month").execute()
+
+        return {"status": "success", "message": "Heures réelles enregistrées."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+# --- Ajoutez ce modèle Pydantic ---
+class PayrollEventsResponse(BaseModel):
+    status: str
+    events_count: int
+
+
+
+# @app.post("/api/employees/{employee_id}/calculate-payroll-events", response_model=PayrollEventsResponse)
+# def calculate_payroll_events(employee_id: str, request_body: dict):
+#     """
+#     1. Récupère le planning prévu et les heures réelles depuis la BDD.
+#     2. Appelle la fonction d'analyse.
+#     3. Sauvegarde le résultat (evenements_paie) dans la BDD.
+#     """
+#     try:
+#         year = request_body.get('year')
+#         month = request_body.get('month')
+
+#         # 1. Récupérer les données sources
+#         employee = supabase.table('employees').select("duree_hebdomadaire, employee_folder_name").eq('id', employee_id).single().execute().data
+#         schedule_data = supabase.table('employee_schedules').select("planned_calendar, actual_hours") \
+#             .match({'employee_id': employee_id, 'year': year, 'month': month}) \
+#             .single().execute().data
+
+#         if not employee or not schedule_data:
+#             raise HTTPException(status_code=404, detail="Données de l'employé ou du calendrier introuvables.")
+
+#         planned_calendar = schedule_data.get('planned_calendar', {}).get('calendrier_prevu', [])
+#         actual_hours = schedule_data.get('actual_hours', {}).get('calendrier_reel', [])
+#         duree_hebdo = employee.get('duree_hebdomadaire')
+#         employee_name = employee.get('employee_folder_name') 
+
+#         # 2. Appeler la fonction d'analyse
+#         payroll_events_list = payroll_analyzer.analyser_horaires_du_mois(
+#             planned_data_all_months=planned_calendar,
+#             actual_data_all_months=actual_hours,
+#             duree_hebdo_contrat=duree_hebdo,
+#             annee=year,
+#             mois=month,
+#             employee_name=employee_name # <-- L'argument manquant est ajouté ici
+#         )
+#         # 3. Préparer et sauvegarder le résultat
+#         result_json = {
+#             "periode": {"annee": year, "mois": month},
+#             "calendrier_analyse": payroll_events_list
+#         }
+        
+#         supabase.table('employee_schedules').update({"payroll_events": result_json}) \
+#             .match({'employee_id': employee_id, 'year': year, 'month': month}) \
+#             .execute()
+
+#         return {"status": "success", "events_count": len(payroll_events_list)}
+
+#     except Exception as e:
+#         traceback.print_exc()
+#         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/api/employees/{employee_id}/calculate-payroll-events", status_code=200)
+def trigger_payroll_events_calculation(employee_id: str, request_body: dict):
+    """
+    Déclenche le calcul des événements de paie pour un mois donné et sauvegarde le résultat.
+    """
+    try:
+        year = request_body.get('year')
+        month = request_body.get('month')
+        if not year or not month:
+            raise HTTPException(status_code=400, detail="L'année et le mois sont requis.")
+
+        # 1. Récupérer les données de l'employé (nom et durée hebdo)
+        employee_res = supabase.table('employees').select("employee_folder_name, duree_hebdomadaire").eq('id', employee_id).single().execute()
+        if not employee_res.data:
+            raise HTTPException(status_code=404, detail="Employé non trouvé.")
+        employee_name = f"{employee_res.data['employee_folder_name']}"
+        duree_hebdo = employee_res.data.get('duree_hebdomadaire')
+        if not duree_hebdo:
+            raise HTTPException(status_code=400, detail="La durée hebdomadaire du contrat n'est pas définie pour cet employé.")
+
+        # 2. Récupérer les données de calendrier et horaires pour le mois, le précédent et le suivant
+        # (exactement comme le faisait le script original)
+        dates_to_fetch = []
+        for i in [-1, 0, 1]:
+            current_date = date(year, month, 15)
+            target_month = current_date.month + i
+            target_year = current_date.year
+            if target_month == 0:
+                target_month = 12
+                target_year -= 1
+            elif target_month == 13:
+                target_month = 1
+                target_year += 1
+            dates_to_fetch.append((target_year, target_month))
+
+        schedule_res = supabase.table('employee_schedules').select("year, month, planned_calendar, actual_hours") \
+            .eq('employee_id', employee_id) \
+            .in_('year', [d[0] for d in dates_to_fetch]) \
+            .in_('month', [d[1] for d in dates_to_fetch]) \
+            .execute()
+        
+        # 3. Préparer les listes de données pour l'analyseur
+        planned_data_all_months = []
+        actual_data_all_months = []
+        for row in schedule_res.data:
+            if row.get('planned_calendar') and row['planned_calendar'].get('calendrier_prevu'):
+                for entry in row['planned_calendar']['calendrier_prevu']:
+                    entry['year'] = row['year']
+                    entry['month'] = row['month']
+                    planned_data_all_months.append(entry)
+            if row.get('actual_hours') and row['actual_hours'].get('calendrier_reel'):
+                for entry in row['actual_hours']['calendrier_reel']:
+                    entry['year'] = row['year']
+                    entry['month'] = row['month']
+                    actual_data_all_months.append(entry)
+
+        # 4. Appeler notre fonction d'analyse "pure"
+        payroll_events_list = payroll_analyzer.analyser_horaires_du_mois(
+            planned_data_all_months=planned_data_all_months,
+            actual_data_all_months=actual_data_all_months,
+            duree_hebdo_contrat=duree_hebdo,
+            annee=year,
+            mois=month,
+            employee_name=employee_name # <-- L'argument manquant est ajouté ici
+        )
+
+        # 5. Sauvegarder le résultat dans la colonne `payroll_events`
+        result_json = {
+            "periode": {"annee": year, "mois": month},
+            "calendrier_analyse": payroll_events_list
+        }
+        
+        supabase.table('employee_schedules').update({"payroll_events": result_json}) \
+            .match({'employee_id': employee_id, 'year': year, 'month': month}) \
+            .execute()
+
+        return {"status": "success", "message": f"{len(payroll_events_list)} événements de paie calculés et sauvegardés."}
+
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/api/employees/{employee_id}/monthly-inputs", response_model=MonthlyInputsRequest)
+def get_monthly_inputs(employee_id: str, year: int, month: int):
+    """ Récupère la saisie du mois (primes, etc.) depuis la BDD. """
+    response = supabase.table('employee_schedules').select("monthly_inputs") \
+        .match({'employee_id': employee_id, 'year': year, 'month': month}) \
+        .maybe_single().execute()
+    
+    # Si rien n'est trouvé ou si la colonne est vide, on renvoie une structure par défaut
+    if not response or not response.data or not response.data.get('monthly_inputs'):
+        return { "year": year, "month": month, "primes": [], "notes_de_frais": [], "acompte": None }
+    
+    return response.data['monthly_inputs']
+
+
+@app.post("/api/employees/{employee_id}/monthly-inputs", status_code=200)
+def update_monthly_inputs(employee_id: str, payload: MonthlyInputsRequest):
+    """ Met à jour la saisie du mois pour un employé. """
+    json_content = payload.model_dump()
+    
+    supabase.table('employee_schedules').upsert({
+        "employee_id": employee_id,
+        "year": payload.year,
+        "month": payload.month,
+        "monthly_inputs": json_content
+    }, on_conflict="employee_id, year, month").execute()
+
+    return {"status": "success", "message": "Saisie du mois enregistrée."}
+

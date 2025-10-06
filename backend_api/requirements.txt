@@ -11,6 +11,8 @@ python-dotenv
 # --- Asynchronous Task Queue (NEW) ---
 dramatiq[redis]
 redis
+jinja2
+weasyprint
 
 # --- Utilities ---
 requests

@@ -7,8 +7,7 @@ import apiClient from '../api/apiClient';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Loader2, AlertCircle, Rocket, Eye, ArrowLeft, Trash2 } from "lucide-react"; // RefreshCw n'est plus nécessaire ici
-
+import { Loader2, AlertCircle, Rocket, Download, ArrowLeft, Trash2 } from "lucide-react";
 interface Employee { 
   id: string; 
   first_name: string; 
@@ -18,7 +17,7 @@ interface Payslip {
   id: string;
   month: number; 
   year: number; 
-  pdf_url: string; 
+  url: string; 
 }
 interface MonthStatus { 
   status: 'idle' | 'loading' | 'success' | 'error'; 
@@ -52,8 +51,8 @@ export default function PayrollDetail() {
       const initialStatuses = months.reduce((acc, month) => {
         const generated = payslipsRes.data.find((p: Payslip) => p.month === month);
         if (generated) {
-            console.log(`DEBUG (Frontend): Bulletin trouvé pour le mois ${month}, URL: ${generated.pdf_url}`);
-            acc[month] = { status: 'success', url: generated.pdf_url, payslipId: generated.id };
+            console.log(`DEBUG (Frontend): Bulletin trouvé pour le mois ${month}, URL: ${generated.url}`);
+            acc[month] = { status: 'success', url: generated.url, payslipId: generated.id };
         } else {
             acc[month] = { status: 'idle' };
         }
@@ -105,11 +104,13 @@ export default function PayrollDetail() {
       case 'success':
         return (
           <div className="flex items-center gap-1">
-            {/* Bouton Voir */}
+            {/* Bouton Télécharger */}
             <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-              <a href={monthInfo.url} target="_blank" rel="noopener noreferrer"><Eye className="h-4 w-4" /></a>
+              <a href={monthInfo.url} download>
+                <Download className="h-4 w-4" />
+              </a>
             </Button>
-            
+                        
             {/* Bouton Regénérer SUPPRIMÉ */}
 
             {/* Bouton Supprimer */}

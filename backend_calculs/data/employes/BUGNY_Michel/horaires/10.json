@@ -1,0 +1,163 @@
+{
+  "periode": {
+    "mois": 10,
+    "annee": 2025
+  },
+  "calendrier_reel": [
+    {
+      "jour": 1,
+      "heures_faites": 0.0,
+      "type": "travail"
+    },
+    {
+      "jour": 2,
+      "heures_faites": 6.0,
+      "type": "travail"
+    },
+    {
+      "jour": 3,
+      "heures_faites": 8.0,
+      "type": "travail"
+    },
+    {
+      "jour": 4,
+      "heures_faites": 6.0,
+      "type": "weekend"
+    },
+    {
+      "jour": 5,
+      "heures_faites": null,
+      "type": "weekend"
+    },
+    {
+      "jour": 6,
+      "heures_faites": null,
+      "type": "travail"
+    },
+    {
+      "jour": 7,
+      "heures_faites": 0.0,
+      "type": "travail"
+    },
+    {
+      "jour": 8,
+      "heures_faites": 0.0,
+      "type": "travail"
+    },
+    {
+      "jour": 9,
+      "heures_faites": 0.0,
+      "type": "travail"
+    },
+    {
+      "jour": 10,
+      "heures_faites": 0.0,
+      "type": "travail"
+    },
+    {
+      "jour": 11,
+      "heures_faites": null,
+      "type": "weekend"
+    },
+    {
+      "jour": 12,
+      "heures_faites": null,
+      "type": "weekend"
+    },
+    {
+      "jour": 13,
+      "heures_faites": 0.0,
+      "type": "travail"
+    },
+    {
+      "jour": 14,
+      "heures_faites": 0.0,
+      "type": "travail"
+    },
+    {
+      "jour": 15,
+      "heures_faites": 0.0,
+      "type": "travail"
+    },
+    {
+      "jour": 16,
+      "heures_faites": 0.0,
+      "type": "travail"
+    },
+    {
+      "jour": 17,
+      "heures_faites": 0.0,
+      "type": "travail"
+    },
+    {
+      "jour": 18,
+      "heures_faites": null,
+      "type": "weekend"
+    },
+    {
+      "jour": 19,
+      "heures_faites": null,
+      "type": "weekend"
+    },
+    {
+      "jour": 20,
+      "heures_faites": 0.0,
+      "type": "travail"
+    },
+    {
+      "jour": 21,
+      "heures_faites": 0.0,
+      "type": "travail"
+    },
+    {
+      "jour": 22,
+      "heures_faites": 0.0,
+      "type": "travail"
+    },
+    {
+      "jour": 23,
+      "heures_faites": 0.0,
+      "type": "travail"
+    },
+    {
+      "jour": 24,
+      "heures_faites": 0.0,
+      "type": "travail"
+    },
+    {
+      "jour": 25,
+      "heures_faites": null,
+      "type": "weekend"
+    },
+    {
+      "jour": 26,
+      "heures_faites": null,
+      "type": "weekend"
+    },
+    {
+      "jour": 27,
+      "heures_faites": 0.0,
+      "type": "travail"
+    },
+    {
+      "jour": 28,
+      "heures_faites": 0.0,
+      "type": "travail"
+    },
+    {
+      "jour": 29,
+      "heures_faites": 0.0,
+      "type": "travail"
+    },
+    {
+      "jour": 30,
+      "heures_faites": 0.0,
+      "type": "travail"
+    },
+    {
+      "jour": 31,
+      "heures_faites": 0.0,
+      "type": "travail"
+    }
+  ]
+}
