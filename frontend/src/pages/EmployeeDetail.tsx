@@ -1,5 +1,7 @@
 // src/pages/EmployeeDetail.tsx 
 
+
+
 import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import apiClient from "@/api/apiClient";
@@ -13,7 +15,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Download, Calendar as CalendarIcon, FileText, Loader2, ArrowLeft, Save } from "lucide-react";
+import { SaisieModal } from "@/components/SaisieModal"; 
+import { Download, Calendar as CalendarIcon, FileText, Loader2, ArrowLeft, Save, ClipboardEdit } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Trash2 } from "lucide-react";
+import * as saisiesApi from "@/api/saisies";
+
+import { toast } from "@/components/ui/use-toast";
+
+
 
 // --- Imports FullCalendar ---
 import FullCalendar from '@fullcalendar/react';
@@ -22,12 +32,18 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import frLocale from '@fullcalendar/core/locales/fr';
 
+
+
+
+
+
 // --- Interfaces ---
 interface Employee { id: string; first_name: string; last_name: string; job_title: string; contract_type: string; statut: string; hire_date: string; }
 interface Payslip { id: string; name: string; url: string; month: number; year: number; }
 
 export default function EmployeeDetail() {
   const { employeeId } = useParams<{ employeeId: string }>();
+  console.log("[SAISIES][CTX] employeeId =", employeeId);
   
   // --- Le hook gère toute la logique du calendrier ---
   const { 
@@ -52,9 +68,72 @@ export default function EmployeeDetail() {
   // --- États pour contrôler la dialogue ---
   const [showModal, setShowModal] = useState(false);
   const [selectedDayData, setSelectedDayData] = useState<DayData | null>(null);
+  const [saisieModalOpen, setSaisieModalOpen] = useState(false);
+
+  const [isLoadingSaisies, setIsLoadingSaisies] = useState(true);
+  const [employeeSaisies, setEmployeeSaisies] = useState<any[]>([]);
+  const [pastSaisies, setPastSaisies] = useState<any[]>([]);
+  const [showPastSaisies, setShowPastSaisies] = useState(false);
+
+  const fetchSaisies = async () => {
+    if (!employeeId) return;
+    try {
+      setIsLoadingSaisies(true);
+      const res = await saisiesApi.getEmployeeMonthlyInputs(employeeId, selectedDate.year, selectedDate.month);
+      setEmployeeSaisies(res.data || []);
+    } catch (err) {
+      console.error("❌ Erreur lors du chargement des saisies :", err);
+    } finally {
+      setIsLoadingSaisies(false);
+    }
+  };
+
+  const handleDeleteSaisie = async (id: string) => {
+    if (!confirm("Supprimer cette saisie ?")) return;
+    try {
+      await saisiesApi.deleteEmployeeMonthlyInput(employeeId!, id);
+      toast({ title: "Supprimée", description: "La saisie a été supprimée." });
+      fetchSaisies();
+    } catch (error) {
+      toast({ title: "Erreur", description: "Impossible de supprimer la saisie.", variant: "destructive" });
+    }
+  };
+
+  // Charger les saisies à chaque changement de mois ou employé
+  useEffect(() => {
+    if (employeeId) fetchSaisies();
+  }, [employeeId, selectedDate]);
+
+
+
+  const [monthlyInputs, setMonthlyInputs] = useState<any>(null);
+
+
+  // --- Récupération des saisies ponctuelles du mois pour cet employé ---
+  const fetchMonthlyInputs = async () => {
+    if (!employeeId) return;
+
+    try {
+      const res = await apiClient.get(`/api/employees/${employeeId}/monthly-inputs`, {
+        params: { year: selectedDate.year, month: selectedDate.month },
+      });
+      console.log("[FETCH][monthlyInputs]", res.data);
+      setMonthlyInputs(res.data);
+    } catch (err) {
+      console.error("❌ Erreur lors du chargement des saisies :", err);
+    }
+  };
+
+  // --- Appel automatique au montage et à chaque changement de mois/année
+  useEffect(() => {
+    fetchMonthlyInputs();
+  }, [employeeId, selectedDate.year, selectedDate.month]);
+
+
 
   // Effet pour charger les données générales de la page (infos employé, bulletins...)
   useEffect(() => {
+
     if (!employeeId) return;
     const fetchPageData = async () => {
       setIsPageLoading(true);
@@ -75,6 +154,13 @@ export default function EmployeeDetail() {
     };
     fetchPageData();
   }, [employeeId]);
+
+  useEffect(() => {
+    fetchMonthlyInputs();
+  }, [employeeId, selectedDate.year, selectedDate.month]);
+
+
+  
 
   // --- Gestionnaires d'événements pour connecter le calendrier et la dialogue ---
 
@@ -131,6 +217,7 @@ export default function EmployeeDetail() {
   if (isPageLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="h-12 w-12 animate-spin"/></div>;
   if (!employee) return <div className="text-center p-8">Employé non trouvé.</div>;
 
+  
   return (
     <div className="space-y-6">
       <Link to="/employees" className="flex items-center text-sm text-muted-foreground hover:text-foreground">
@@ -155,9 +242,10 @@ export default function EmployeeDetail() {
       </Card>
       
       <Tabs defaultValue="calendrier">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="contrat"><FileText className="mr-2 h-4 w-4"/>Contrat</TabsTrigger>
           <TabsTrigger value="bulletins"><Download className="mr-2 h-4 w-4"/>Bulletins</TabsTrigger>
+          <TabsTrigger value="saisie"><ClipboardEdit className="mr-2 h-4 w-4"/>Saisie du mois</TabsTrigger>
           <TabsTrigger value="calendrier"><CalendarIcon className="mr-2 h-4 w-4"/>Calendrier</TabsTrigger>
         </TabsList>
 
@@ -191,6 +279,155 @@ export default function EmployeeDetail() {
             </CardContent>
           </Card>
         </TabsContent>
+        
+        <TabsContent value="saisie" className="mt-4">
+          <Card>
+            <CardHeader className="flex flex-row justify-between items-center">
+              <div>
+                <CardTitle>Saisies du mois en cours</CardTitle>
+                <CardDescription>
+                  Primes, acomptes et autres variables de{" "}
+                  {new Date(selectedDate.year, selectedDate.month - 1).toLocaleString("fr-FR", {
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </CardDescription>
+              </div>
+
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setShowPastSaisies(!showPastSaisies)}>
+                  📅 Saisies passées
+                </Button>
+                <Button onClick={() => setSaisieModalOpen(true)}>+ Ajouter une saisie</Button>
+              </div>
+            </CardHeader>
+
+            <CardContent>
+              {monthlyInputs ? (
+                <div className="space-y-4">
+                  {monthlyInputs.primes?.length > 0 && (
+                    <div>
+                      <p className="font-semibold">Primes :</p>
+                      <ul className="list-disc ml-6">
+                        {monthlyInputs.primes.map((p: any, i: number) => (
+                          <li key={i}>
+                            {p.prime_id.replace(/_/g, " ")} —{" "}
+                            <span className="text-muted-foreground">
+                              {p.montant.toFixed(2)} €
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {monthlyInputs.notes_de_frais?.length > 0 && (
+                    <div>
+                      <p className="font-semibold">Notes de frais :</p>
+                      <ul className="list-disc ml-6">
+                        {monthlyInputs.notes_de_frais.map((n: any, i: number) => (
+                          <li key={i}>
+                            {n.prime_id.replace(/_/g, " ")} —{" "}
+                            <span className="text-muted-foreground">
+                              {n.montant.toFixed(2)} €
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {monthlyInputs.autres?.length > 0 && (
+                    <div>
+                      <p className="font-semibold">Autres :</p>
+                      <ul className="list-disc ml-6">
+                        {monthlyInputs.autres.map((a: any, i: number) => (
+                          <li key={i}>
+                            {a.prime_id.replace(/_/g, " ")} —{" "}
+                            <span className="text-muted-foreground">
+                              {a.montant.toFixed(2)} €
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {monthlyInputs.acompte && (
+                    <div>
+                      <strong>Acompte :</strong> {monthlyInputs.acompte} €
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Aucune saisie ponctuelle pour ce mois.
+                </p>
+              )}
+            </CardContent>
+
+          </Card>
+
+          {showPastSaisies && (
+            <Card className="mt-6 border-dashed">
+              <CardHeader>
+                <CardTitle>Saisies passées</CardTitle>
+                <CardDescription>Historique des saisies par mois</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {pastSaisies.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Aucune saisie enregistrée précédemment.</p>
+                ) : (
+                  pastSaisies.map((group) => (
+                    <div key={`${group.year}-${group.month}`} className="mb-4">
+                      <p className="font-semibold">
+                        {new Date(group.year, group.month - 1).toLocaleString("fr-FR", {
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </p>
+                      <ul className="list-disc ml-6 text-sm">
+                        {group.saisies.map((s) => (
+                          <li key={s.id}>
+                            {s.name} — {s.amount} €
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          <SaisieModal
+            isOpen={saisieModalOpen}
+            onClose={() => setSaisieModalOpen(false)}
+            onSave={async (data) => {
+              try {
+                await saisiesApi.createMonthlyInput(
+                  data.map((d) => ({
+                    ...d,
+                    employee_id: employeeId,
+                    year: selectedDate.year,
+                    month: selectedDate.month,
+                  }))
+                );
+                toast({ title: "Succès", description: "Saisie ajoutée avec succès." });
+                fetchSaisies();
+              } catch (err) {
+                toast({
+                  title: "Erreur",
+                  description: "Échec de l'enregistrement de la saisie.",
+                  variant: "destructive",
+                });
+              }
+            }}
+            employees={[employee]}
+            mode="single"
+          />
+        </TabsContent>
+
         
         <TabsContent value="calendrier" className="mt-4">
           <Card>
@@ -251,6 +488,35 @@ export default function EmployeeDetail() {
         onSave={handleModalSave}
         selectedDate={selectedDate}
       />
+      <SaisieModal
+        isOpen={saisieModalOpen}
+        onClose={() => setSaisieModalOpen(false)}
+        onSave={async (data) => {
+          console.group("[SAISIE MODALE][onSave]");
+          try {
+            if (!employeeId || !selectedDate.year || !selectedDate.month) {
+              console.error("❌ Données manquantes :", { employeeId, selectedDate });
+              return;
+            }
+
+            // Étape 1 : Création côté backend
+            await apiClient.post("/api/monthly-inputs", data);
+
+            // Étape 2 : Rechargement automatique
+            await fetchMonthlyInputs();
+
+            toast({ title: "Succès", description: "Saisie enregistrée avec succès ✅" });
+          } catch (err) {
+            console.error("❌ Erreur lors de la sauvegarde :", err);
+            toast({ title: "Erreur", description: "Échec de l'enregistrement." });
+          }
+          console.groupEnd();
+        }}
+        employees={[employee]}
+        mode="single"
+      />
+
+
     </div>
   );
 }

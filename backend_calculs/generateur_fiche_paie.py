@@ -273,18 +273,36 @@ def generer_une_fiche_de_paie():
 
         primes_soumises = []
         primes_non_soumises = []
+
+        # --- 1. On charge les règles officielles ---
         catalogue_primes = {p['id']: p for p in contexte.baremes['primes']}
 
-        for prime_saisie in saisie_du_mois.get('primes', []):
-            prime_id = prime_saisie.get('prime_id')
+        # --- 2. On fusionne toutes les catégories du fichier saisies/[M].json ---
+        toutes_saisies = []
+        for cle in ["primes", "notes_de_frais", "autres"]:
+            toutes_saisies.extend(saisie_du_mois.get(cle, []))
+
+        # --- 3. On parcourt chaque saisie et on détermine le traitement ---
+        for saisie in toutes_saisies:
+            prime_id = saisie.get("prime_id") or saisie.get("libelle", "").replace(" ", "_").lower()
+            montant = float(saisie.get("montant", 0.0))
+            libelle = saisie.get("libelle") or saisie.get("name") or prime_id.replace("_", " ")
+
+            # a) Si la prime est connue du barème (data/primes.json)
             regles = catalogue_primes.get(prime_id)
             if regles:
-                prime_calculee = {"libelle": regles.get('libelle'), "montant": prime_saisie.get('montant')}
-                if regles.get('soumise_a_cotisations'):
-                    primes_soumises.append(prime_calculee)
-                else:
-                    primes_non_soumises.append(prime_calculee)
-        
+                soumise_cotis = regles.get("soumise_a_cotisations", True)
+            else:
+                # b) Sinon, on regarde si le JSON a une indication explicite
+                soumise_cotis = saisie.get("soumise_a_cotisations", saisie.get("soumise_a_csg", True))
+
+            prime_calculee = {"libelle": libelle, "montant": montant}
+
+            if soumise_cotis:
+                primes_soumises.append(prime_calculee)
+            else:
+                primes_non_soumises.append(prime_calculee)
+
         # --- ÉTAPE 2 : CALCULER LE SALAIRE BRUT ---
         resultat_brut = calculer_salaire_brut(
             contexte,

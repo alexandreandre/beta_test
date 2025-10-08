@@ -93,30 +93,35 @@ export function useCalendar(employeeId: string | undefined) {
   }, [fetchAllCalendarData]);
 
   // Fonction pour sauvegarder toutes les modifications en une seule fois
-  const saveAllCalendarData = async () => {
-    if (!employeeId) return;
-    setIsSaving(true);
-    try {
-      // Étape 1 : Sauvegarder les données du calendrier et des horaires
-      await Promise.all([
-        calendarApi.updatePlannedCalendar(employeeId, selectedDate.year, selectedDate.month, plannedCalendar),
-        calendarApi.updateActualHours(employeeId, selectedDate.year, selectedDate.month, actualHours)
-      ]);
-      
-      // --- NOUVELLE ÉTAPE ---
-      // Étape 2 : Déclencher le calcul des événements de paie
-      console.log("Déclenchement du calcul des événements de paie...");
-      await calendarApi.calculatePayrollEvents(employeeId, selectedDate.year, selectedDate.month);
-      
-      toast({ title: "Succès", description: "Calendrier et événements de paie sauvegardés." });
 
-    } catch (error) {
-      console.error(error);
-      toast({ title: "Erreur", description: "La sauvegarde ou le calcul a échoué.", variant: "destructive" });
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  // src/hooks/useCalendar.ts
+
+  const saveAllCalendarData = async () => {
+      if (!employeeId) return;
+
+      console.log("%c--- [WORKFLOW-PAIE | Étape 1] Déclenchement Frontend ---", "color: blue; font-weight: bold;");
+      setIsSaving(true);
+      try {
+        console.log("  -> Action: Sauvegarde des données brutes (planned & actual)...");
+        await Promise.all([
+          calendarApi.updatePlannedCalendar(employeeId, selectedDate.year, selectedDate.month, plannedCalendar),
+          calendarApi.updateActualHours(employeeId, selectedDate.year, selectedDate.month, actualHours)
+        ]);
+        console.log("  -> Succès: Données brutes enregistrées.");
+
+        console.log("%c--- [WORKFLOW-PAIE | Étape 2] Demande de calcul au Backend ---", "color: blue; font-weight: bold;");
+        await calendarApi.calculatePayrollEvents(employeeId, selectedDate.year, selectedDate.month);
+        console.log("  -> Succès: Le backend a terminé le calcul.");
+        
+        toast({ title: "Succès", description: "Calendrier et événements de paie sauvegardés et calculés." });
+
+      } catch (error) {
+        console.error(error);
+        toast({ title: "Erreur", description: "La sauvegarde ou le calcul a échoué.", variant: "destructive" });
+      } finally {
+        setIsSaving(false);
+      }
+    };
 
   const updateDayData = (updatedDay: { jour: number; type: string; heures_prevues: number | null; heures_faites: number | null; }) => {
     console.log('[HOOK] Mise à jour de l\'état avec :', updatedDay);

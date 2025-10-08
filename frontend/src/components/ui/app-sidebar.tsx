@@ -11,7 +11,8 @@ import {
   FileText,
   FolderOpen,
   Plus,
-  LogOut
+  LogOut,
+  ClipboardEdit // <-- 1. AJOUTEZ L'ICÔNE ICI
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 
@@ -33,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 
+
 // Mock user for demo - in real app this would come from auth context
 const mockUser = {
   name: "Marie Dupont",
@@ -45,6 +47,7 @@ const menuItems = {
   rh: [
     { title: "Tableau de Bord", url: "/", icon: LayoutDashboard },
     { title: "Salariés", url: "/employees", icon: Users },
+    { title: "Saisies du Mois", url: "/saisies", icon: ClipboardEdit }, // <-- 2. AJOUTEZ LA LIGNE DU LIEN ICI
     { title: "Paie", url: "/payroll", icon: Calculator },
     { title: "Congés & Absences", url: "/leaves", icon: Calendar },
     { title: "Suivi des Taux", url: "/rates", icon: TrendingUp },
@@ -88,12 +91,12 @@ export function AppSidebar() {
     <Sidebar className={collapsed ? "w-16" : "w-64"} collapsible="icon">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg">
-            HR
+          <div className="flex h-10 w-100 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg">
+            SIRH
           </div>
           {!collapsed && (
             <div className="flex flex-col">
-              <h2 className="text-lg font-semibold">PeachyHR</h2>
+              <h2 className="text-lg font-semibold">Colorplast</h2>
               <p className="text-xs text-muted-foreground">Gestion RH & Paie</p>
             </div>
           )}

@@ -16,7 +16,7 @@ import Rates from "./pages/Rates";
 import NotFound from "./pages/NotFound";
 import Payroll from './pages/Payroll';
 import PayrollDetail from './pages/PayrollDetail';
-
+import Saisies from './pages/Saisies';
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -40,6 +40,7 @@ const App = () => (
                   
                   {/* --- 2. AJOUTEZ LA ROUTE DYNAMIQUE ICI --- */}
                   <Route path="/employees/:employeeId" element={<EmployeeDetail />} />
+                  <Route path="/saisies" element={<Saisies />} />
                   
                   <Route path="/rates" element={<Rates />} />
                   <Route path="/payroll" element={<Payroll />} />
