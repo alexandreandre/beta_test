@@ -8,7 +8,7 @@ import { useParams, Link } from "react-router-dom";
 import apiClient from "@/api/apiClient";
 
 // --- Notre hook et notre modal ---
-import { useCalendar } from "@/hooks/useCalendar"; 
+
 import { ScheduleModal, DayData } from "@/components/ScheduleModal"; 
 
 // --- Imports UI & Icônes ---
@@ -21,7 +21,10 @@ import { Download, Calendar as CalendarIcon, FileText, Loader2, ArrowLeft, Save,
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash2 } from "lucide-react";
 import * as saisiesApi from "@/api/saisies";
-
+import { useCalendar, WeekTemplate } from "@/hooks/useCalendar"; // ✅ On importe le nouveau type
+import { Input } from "@/components/ui/input"; // ✅ On importe l'Input
+import { Label } from "@/components/ui/label";   // ✅ On importe le Label
+import { ArrowRight } from "lucide-react";       // ✅ On importe une icône
 import { toast } from "@/components/ui/use-toast";
 
 
@@ -42,6 +45,53 @@ import frLocale from '@fullcalendar/core/locales/fr';
 interface Employee { id: string; first_name: string; last_name: string; job_title: string; contract_type: string; statut: string; hire_date: string; }
 interface Payslip { id: string; name: string; url: string; month: number; year: number; }
 
+// ✅ NOUVEAU COMPOSANT : Le formulaire pour le modèle de semaine
+// -----------------------------------------------------------------------------
+interface WeekTemplateFormProps {
+  template: WeekTemplate;
+  setTemplate: React.Dispatch<React.SetStateAction<WeekTemplate>>;
+  onApply: () => void;
+}
+
+function WeekTemplateForm({ template, setTemplate, onApply }: WeekTemplateFormProps) {
+  const days = [
+    { label: 'Lundi', key: 1 }, { label: 'Mardi', key: 2 }, { label: 'Mercredi', key: 3 },
+    { label: 'Jeudi', key: 4 }, { label: 'Vendredi', key: 5 },
+  ];
+
+  const handleInputChange = (dayKey: number, value: string) => {
+    setTemplate(prev => ({ ...prev, [dayKey]: value }));
+  };
+
+  return (
+    <Card className="mb-4 bg-muted/40">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Modèle de semaine type</CardTitle>
+        <CardDescription className="text-xs">Définissez les heures prévues, puis appliquez-les à tout le mois.</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col md:flex-row items-center gap-4">
+        <div className="grid grid-cols-5 gap-3 flex-grow">
+          {days.map(day => (
+            <div key={day.key} className="grid gap-1.5">
+              <Label htmlFor={`template-day-${day.key}`} className="text-xs">{day.label}</Label>
+              <Input
+                id={`template-day-${day.key}`} type="number" placeholder="h"
+                value={template[day.key] || ''}
+                onChange={(e) => handleInputChange(day.key, e.target.value)}
+                className="h-9"
+              />
+            </div>
+          ))}
+        </div>
+        <Button onClick={onApply} className="w-full md:w-auto mt-4 md:mt-0">
+          <ArrowRight className="mr-2 h-4 w-4"/>
+          Appliquer au mois
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+// -----------------------------------------------------------------------------
 export default function EmployeeDetail() {
   const { employeeId } = useParams<{ employeeId: string }>();
   console.log("[SAISIES][CTX] employeeId =", employeeId);
@@ -58,6 +108,9 @@ export default function EmployeeDetail() {
     isSaving,
     saveAllCalendarData,
     updateDayData,
+    weekTemplate,       
+    setWeekTemplate, 
+    applyWeekTemplate,  
   } = useCalendar(employeeId);
 
   // --- États spécifiques à la page (hors calendrier) ---
@@ -325,6 +378,12 @@ export default function EmployeeDetail() {
                 </Button>
              </CardHeader>
              <CardContent className="h-[80vh] p-0 md:p-4">
+                {/* ✅ NOUVEAU : On insère notre composant de formulaire ici */}
+                <WeekTemplateForm
+                  template={weekTemplate}
+                  setTemplate={setWeekTemplate}
+                  onApply={applyWeekTemplate}
+                />
                 {isCalendarLoading ? <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div> : (
                   <FullCalendar
                     key={`${selectedDate.year}-${selectedDate.month}`} 

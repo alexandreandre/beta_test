@@ -68,9 +68,11 @@ def process_payslip_generation(employee_id: str, year: int, month: int):
 
         payroll_events_list = payroll_analyzer.analyser_horaires_du_mois(planned_data_all_months, actual_data_all_months, duree_hebdo, year, month, employee_folder_name)
         payroll_events_json = { "periode": {"annee": year, "mois": month}, "calendrier_analyse": payroll_events_list }
+        print(f"\nDEBUG [Generator]: Nombre de saisies trouvées en BDD pour ce mois : {len(saisies_res.data)}\n")
 
         saisies_data = { "periode": {"mois": month, "annee": year}, "primes": [] }
         for row in saisies_res.data:
+            print(f"DEBUG [Generator] - Contenu de la ligne BDD : {row}")
             # On prépare un dictionnaire complet pour chaque prime
             prime_entry = {
                 "prime_id": row['name'].replace(" ", "_"),

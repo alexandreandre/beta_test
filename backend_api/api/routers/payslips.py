@@ -82,17 +82,7 @@ def delete_payslip(payslip_id: str):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
     
-@router.get("/api/primes-catalogue")
-def get_primes_catalogue():
-    """ Lit et retourne le contenu du fichier primes.json. """
-    try:
-        primes_path = PATH_TO_PAYROLL_ENGINE / "data" / "primes.json"
-        primes_data = json.loads(primes_path.read_text(encoding="utf-8"))
-        return primes_data.get("primes", [])
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Fichier primes.json introuvable.")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+
     
 @router.get("/api/debug-storage/{employee_id}/{year}/{month}")
 def debug_storage_file(employee_id: str, year: int, month: int):

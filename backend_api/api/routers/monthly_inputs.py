@@ -1,5 +1,6 @@
 # backend_api/api/routers/monthly_inputs.py
 
+import os
 import sys 
 import traceback
 import json
@@ -8,6 +9,10 @@ from fastapi import APIRouter, HTTPException, Request
 
 from core.config import supabase, PATH_TO_PAYROLL_ENGINE
 from schemas.monthly_input import MonthlyInput, MonthlyInputCreate
+
+print("DEBUG ⛓️ PATH_TO_PAYROLL_ENGINE =", PATH_TO_PAYROLL_ENGINE)
+print("DEBUG 📁 Exists:", PATH_TO_PAYROLL_ENGINE.exists())
+print("DEBUG 🧾 Listing:", os.listdir(PATH_TO_PAYROLL_ENGINE) if PATH_TO_PAYROLL_ENGINE.exists() else "not found")
 
 router = APIRouter(
     tags=["Monthly Inputs"]
@@ -90,23 +95,23 @@ def create_employee_monthly_inputs(employee_id: str, prime_data: MonthlyInputCre
     Crée une saisie ponctuelle pour un employé spécifique en utilisant la validation Pydantic.
     """
     try:
-        # Pydantic a déjà validé les données. On les convertit en dictionnaire.
         data_to_insert = prime_data.model_dump()
-        # On ajoute l'ID de l'employé qui vient de l'URL
         data_to_insert["employee_id"] = employee_id
         
-        print(f"📥 Données validées prêtes pour insertion : {data_to_insert}")
+        # --- 🎯 ESPION N°1 ---
+        # Affiche exactement ce qui va être envoyé à la BDD.
+        print(f"\nDEBUG [API Router]: Données prêtes à être insérées dans Supabase -> {json.dumps(data_to_insert)}\n")
+        # --- FIN DE L'ESPION ---
 
         response = supabase.table("monthly_inputs").insert(data_to_insert).execute()
 
-        print("✅ Insertion réussie :", response.data)
+        print("✅ Insertion réussie.")
         return {"status": "success", "inserted_data": response.data[0]}
 
     except Exception as e:
         print("❌ Erreur create_employee_monthly_inputs :", e)
         traceback.print_exc(file=sys.stderr)
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # --- Suppression d'une saisie d’un employé ---
 @router.delete("/api/employees/{employee_id}/monthly-inputs/{input_id}")
@@ -121,12 +126,16 @@ def delete_employee_monthly_input(employee_id: str, input_id: str):
 
 @router.get("/api/primes-catalogue")
 def get_primes_catalogue():
-    """ Lit et retourne le contenu du fichier primes.json. """
+    """Lit et retourne le contenu du fichier primes.json."""
+    import traceback
     try:
         primes_path = PATH_TO_PAYROLL_ENGINE / "data" / "primes.json"
-        primes_data = json.loads(primes_path.read_text(encoding="utf-8"))
+        print(f"DEBUG lecture fichier: {primes_path} | exists={primes_path.exists()}")
+        raw = primes_path.read_text(encoding="utf-8")
+        print(f"DEBUG taille={len(raw)} premiers_caractères={raw[:80]!r}")
+        primes_data = json.loads(raw)
+        print("DEBUG JSON chargé avec succès")
         return primes_data.get("primes", [])
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Fichier primes.json introuvable.")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}")

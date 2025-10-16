@@ -12,7 +12,21 @@ type ActualHoursData = calendarApi.ActualHoursData;
  * Hook personnalisé pour gérer toute la logique du calendrier d'un employé.
  * @param employeeId L'ID de l'employé pour lequel charger le calendrier.
  */
+
+export type WeekTemplate = {
+  [key: number]: string; // Clé 1-5 pour Lun-Ven, valeur en string pour l'input
+};
+
+
+
 export function useCalendar(employeeId: string | undefined) {
+  const [weekTemplate, setWeekTemplate] = useState<WeekTemplate>({
+    1: '8', // Lundi
+    2: '8', // Mardi
+    3: '8', // Mercredi
+    4: '8', // Jeudi
+    5: '7', // Vendredi
+  });
   
   const { toast } = useToast();
   
@@ -31,7 +45,7 @@ export function useCalendar(employeeId: string | undefined) {
   const [isSaving, setIsSaving] = useState(false);
 
   // --- LOGIQUE D'ACCÈS AUX DONNÉES ---
-
+  
   // Fonction pour charger toutes les données du calendrier depuis l'API
   const fetchAllCalendarData = useCallback(async () => {
     if (!employeeId) return;
@@ -75,6 +89,7 @@ export function useCalendar(employeeId: string | undefined) {
               heures_faites: apiDay ? apiDay.heures_faites : null
           };
       });
+      
 
       // 3. On met à jour les états avec des calendriers toujours complets.
       setPlannedCalendar(finalPlannedCalendar);
@@ -92,6 +107,31 @@ export function useCalendar(employeeId: string | undefined) {
     fetchAllCalendarData();
   }, [fetchAllCalendarData]);
 
+  // ✅ NOUVELLE FONCTION : Logique pour appliquer le modèle
+  const applyWeekTemplate = () => {
+    const newPlannedCalendar = plannedCalendar.map(day => {
+      const date = new Date(selectedDate.year, selectedDate.month - 1, day.jour);
+      const dayOfWeek = date.getDay(); // 0=Dim, 1=Lun, ..., 6=Sam
+
+      // Si c'est un jour de semaine défini dans le modèle (et que ce n'est pas un férié/congé existant)
+      if (dayOfWeek >= 1 && dayOfWeek <= 5 && !['ferie', 'conge'].includes(day.type)) {
+        const hoursString = weekTemplate[dayOfWeek];
+        const hours = hoursString && hoursString.trim() !== '' ? parseFloat(hoursString) : null;
+
+        return {
+          ...day,
+          type: hours !== null && hours > 0 ? 'travail' : 'weekend',
+          heures_prevues: hours,
+        };
+      }
+
+      // Sinon (weekend ou jour déjà marqué), on ne change rien
+      return day;
+    });
+
+    setPlannedCalendar(newPlannedCalendar);
+    toast({ title: "Modèle appliqué", description: "Le calendrier prévisionnel a été mis à jour." });
+  };
   // Fonction pour sauvegarder toutes les modifications en une seule fois
 
   // src/hooks/useCalendar.ts
@@ -154,5 +194,8 @@ export function useCalendar(employeeId: string | undefined) {
     isSaving,
     saveAllCalendarData,
     updateDayData,
+    weekTemplate,       
+    setWeekTemplate,   
+    applyWeekTemplate, 
   };
 }
