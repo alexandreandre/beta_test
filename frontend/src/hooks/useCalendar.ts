@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import * as calendarApi from '@/api/calendar';
+import { DayData } from '@/components/ScheduleModal';
 
 // On reprend les types de données depuis notre fichier d'API
 type PlannedEventData = calendarApi.PlannedEventData;
@@ -40,9 +41,11 @@ export function useCalendar(employeeId: string | undefined) {
   // On stocke les deux ensembles de données séparément
   const [plannedCalendar, setPlannedCalendar] = useState<PlannedEventData[]>([]);
   const [actualHours, setActualHours] = useState<ActualHoursData[]>([]);
-
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  const [editingDay, setEditingDay] = useState<number | null>(null);
 
   // --- LOGIQUE D'ACCÈS AUX DONNÉES ---
   
@@ -163,23 +166,33 @@ export function useCalendar(employeeId: string | undefined) {
       }
     };
 
-  const updateDayData = (updatedDay: { jour: number; type: string; heures_prevues: number | null; heures_faites: number | null; }) => {
-    console.log('[HOOK] Mise à jour de l\'état avec :', updatedDay);
-    setPlannedCalendar(prev =>
-      prev.map(p =>
-        p.jour === updatedDay.jour
-          ? { ...p, type: updatedDay.type, heures_prevues: updatedDay.heures_prevues }
-          : p
-      )
-    );
-    setActualHours(prev =>
-      prev.map(a =>
-        a.jour === updatedDay.jour
-          ? { ...a, type: updatedDay.type, heures_faites: updatedDay.heures_faites }
-          : a
-      )
-    );
+  const updateDayData = (updatedDay: Partial<DayData>) => {
+      if (updatedDay.jour === undefined) return;
+  
+      // Mise à jour du calendrier prévisionnel
+      setPlannedCalendar(prev =>
+          prev.map(p => {
+              if (p.jour !== updatedDay.jour) return p;
+              // On fusionne uniquement les champs pertinents pour le prévisionnel
+              const newPlannedData: Partial<PlannedEventData> = {};
+              if (updatedDay.type !== undefined) newPlannedData.type = updatedDay.type;
+              if (updatedDay.heures_prevues !== undefined) newPlannedData.heures_prevues = updatedDay.heures_prevues;
+              return { ...p, ...newPlannedData };
+          })
+      );
+  
+      // Mise à jour des heures réelles (heures_faites et type pour la cohérence)
+      setActualHours(prev =>
+          prev.map(a => {
+              if (a.jour !== updatedDay.jour) return a;
+              const newActualData: Partial<ActualHoursData> = {};
+              if (updatedDay.type !== undefined) newActualData.type = updatedDay.type;
+              if (updatedDay.heures_faites !== undefined) newActualData.heures_faites = updatedDay.heures_faites;
+              return { ...a, ...newActualData };
+          })
+      );
   };
+
 
 
   // --- On expose tous les états et fonctions dont l'interface aura besoin ---
@@ -197,5 +210,7 @@ export function useCalendar(employeeId: string | undefined) {
     weekTemplate,       
     setWeekTemplate,   
     applyWeekTemplate, 
+    editingDay,
+    setEditingDay,
   };
 }

@@ -35,6 +35,7 @@ export function ScheduleModal({ isOpen, onClose, dayData, onSave, selectedDate }
 
   const handleSave = () => {
     if (editableDay) {
+        onClose(); // Fermer la modale avant de sauvegarder
         // AJOUTEZ CETTE LIGNE DE DÉBOGAGE
         console.log('[MODAL] Données envoyées au parent :', editableDay);
         onSave(editableDay);

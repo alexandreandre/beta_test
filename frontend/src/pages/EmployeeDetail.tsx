@@ -1,17 +1,15 @@
 // src/pages/EmployeeDetail.tsx 
 
 
-import { useCallback } from 'react'; // Ajoute useCallback à tes imports de React
-
-import { useState, useEffect, useMemo } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import apiClient from "@/api/apiClient";
 
 // --- Notre hook et notre modal ---
-
-import { ScheduleModal, DayData } from "@/components/ScheduleModal"; 
+import { DayData } from "@/components/ScheduleModal"; 
 
 // --- Imports UI & Icônes ---
+import { CalendarDayCell } from '@/components/CalendarDayCell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -20,7 +18,7 @@ import { SaisieModal } from "@/components/SaisieModal";
 import { Download, Calendar as CalendarIcon, FileText, Loader2, ArrowLeft, Save, ClipboardEdit } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash2 } from "lucide-react";
-import * as saisiesApi from "@/api/saisies";
+import * as saisiesApi from "@/api/saisies"; // ✅ On importe le nouveau type
 import { useCalendar, WeekTemplate } from "@/hooks/useCalendar"; // ✅ On importe le nouveau type
 import { Input } from "@/components/ui/input"; // ✅ On importe l'Input
 import { Label } from "@/components/ui/label";   // ✅ On importe le Label
@@ -28,17 +26,10 @@ import { ArrowRight } from "lucide-react";       // ✅ On importe une icône
 import { toast } from "@/components/ui/use-toast";
 
 
-
 // --- Imports FullCalendar ---
-import FullCalendar from '@fullcalendar/react';
+import FullCalendar, { DayCellContentArg } from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
-import interactionPlugin from '@fullcalendar/interaction';
 import frLocale from '@fullcalendar/core/locales/fr';
-
-
-
-
 
 
 // --- Interfaces ---
@@ -94,7 +85,6 @@ function WeekTemplateForm({ template, setTemplate, onApply }: WeekTemplateFormPr
 // -----------------------------------------------------------------------------
 export default function EmployeeDetail() {
   const { employeeId } = useParams<{ employeeId: string }>();
-  console.log("[SAISIES][CTX] employeeId =", employeeId);
   
   // --- Le hook gère toute la logique du calendrier ---
   const { 
@@ -108,9 +98,9 @@ export default function EmployeeDetail() {
     isSaving,
     saveAllCalendarData,
     updateDayData,
-    weekTemplate,       
-    setWeekTemplate, 
-    applyWeekTemplate,  
+    weekTemplate,
+    setWeekTemplate,
+    applyWeekTemplate,
   } = useCalendar(employeeId);
 
   // --- États spécifiques à la page (hors calendrier) ---
@@ -118,10 +108,6 @@ export default function EmployeeDetail() {
   const [payslips, setPayslips] = useState<Payslip[]>([]);
   const [contractUrl, setContractUrl] = useState<string | null>(null);
   const [isPageLoading, setIsPageLoading] = useState(true);
-  
-  // --- États pour contrôler la dialogue ---
-  const [showModal, setShowModal] = useState(false);
-  const [selectedDayData, setSelectedDayData] = useState<DayData | null>(null);
   const [saisieModalOpen, setSaisieModalOpen] = useState(false);
 
   const [isLoadingSaisies, setIsLoadingSaisies] = useState(true);
@@ -130,19 +116,20 @@ export default function EmployeeDetail() {
 
   const fetchSaisies = useCallback(async () => {
     if (!employeeId) return;
+    const { year, month } = selectedDate;
     setIsLoadingSaisies(true);
     try {
-      const res = await saisiesApi.getEmployeeMonthlyInputs(employeeId, selectedDate.year, selectedDate.month);
+      const res = await saisiesApi.getEmployeeMonthlyInputs(employeeId, year, month);
       setEmployeeSaisies(res.data || []);
     } catch (err) {
       console.error("❌ Erreur lors du chargement des saisies :", err);
     } finally {
       setIsLoadingSaisies(false);
     }
-  }, [employeeId, selectedDate]); // Les dépendances sont correctes
+  }, [employeeId, selectedDate.year, selectedDate.month]); // Utilisation des primitives pour les dépendances
 
   const handleDeleteSaisie = async (id: string) => {
-    if (!confirm("Supprimer cette saisie ?")) return;
+    if (!window.confirm("Supprimer cette saisie ?")) return;
     try {
       await saisiesApi.deleteEmployeeMonthlyInput(employeeId!, id);
       toast({ title: "Supprimée", description: "La saisie a été supprimée." });
@@ -155,7 +142,7 @@ export default function EmployeeDetail() {
   // Charger les saisies à chaque changement de mois ou employé
   useEffect(() => {
     if (employeeId) fetchSaisies();
-  }, [employeeId, selectedDate]);
+  }, [fetchSaisies]); // fetchSaisies est maintenant stable grâce à useCallback et ses dépendances primitives
 
 
 
@@ -188,32 +175,6 @@ export default function EmployeeDetail() {
 
 
   
-
-  // --- Gestionnaires d'événements pour connecter le calendrier et la dialogue ---
-
-  const handleDateClick = (arg: { date: Date } | { event: { start: Date } }) => {
-    const clickedDate = 'date' in arg ? arg.date : arg.event.start;
-    const dayOfMonth = clickedDate.getDate();
-    
-    const planned = plannedCalendar.find(e => e.jour === dayOfMonth);
-    const actual = actualHours.find(e => e.jour === dayOfMonth);
-    
-    // On combine les données du prévu et du réel pour les envoyer à la dialogue
-    setSelectedDayData({
-        jour: dayOfMonth,
-        type: planned?.type || 'travail',
-        heures_prevues: planned?.heures_prevues || null,
-        heures_faites: actual?.heures_faites || null,
-    });
-    setShowModal(true);
-  };
-  
-  const handleModalSave = (updatedDay: DayData) => {
-    // AJOUTEZ CETTE LIGNE DE DÉBOGAGE
-    console.log('[DETAIL PAGE] Données reçues du modal :', updatedDay);
-    updateDayData(updatedDay);
-    setShowModal(false);
-};
   // AJOUTER CETTE FONCTION
   const handleSaveSaisie = async (data: any[]) => { // Le type 'any' est temporaire pour correspondre au modal
       try {
@@ -226,31 +187,16 @@ export default function EmployeeDetail() {
       }
   };
 
-  // --- Transformation des données pour l'affichage dans FullCalendar ---
-  const calendarEvents = useMemo(() => {
-    const plannedEvents = plannedCalendar.map(event => ({
-        id: `planned-${event.jour}`,
-        title: event.heures_prevues ? `${event.heures_prevues}h` : '',
-        start: new Date(selectedDate.year, selectedDate.month - 1, event.jour),
-        allDay: true,
-        display: 'background',
-        color: event.type === 'weekend' ? '#f3f4f6' : (event.type === 'ferie' || event.type === 'conge') ? '#dbeafe' : 'transparent',
-    }));
-    const actualEvents = actualHours.filter(event => event.heures_faites && event.heures_faites > 0).map(event => ({
-        id: `actual-${event.jour}`,
-        title: `${event.heures_faites}h`,
-        start: new Date(selectedDate.year, selectedDate.month - 1, event.jour),
-        allDay: true,
-        backgroundColor: '#16a34a',
-        borderColor: '#16a34a',
-    }));
-    const allEvents = [...plannedEvents, ...actualEvents];
-    
-    // AJOUTEZ CETTE LIGNE DE DÉBOGAGE
-    console.log('[DISPLAY] Événements préparés pour FullCalendar :', allEvents);
-
-    return allEvents;
-  }, [plannedCalendar, actualHours, selectedDate]);
+  // --- Handler pour le rendu personnalisé des cellules ---
+  const renderDayCell = useCallback((arg: DayCellContentArg) => {
+    return <CalendarDayCell 
+      arg={arg}
+      plannedCalendar={plannedCalendar}
+      actualHours={actualHours}
+      updateDayData={updateDayData}
+      selectedDate={selectedDate}
+    />
+  }, [plannedCalendar, actualHours, updateDayData, selectedDate]);
 
   if (isPageLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="h-12 w-12 animate-spin"/></div>;
   if (!employee) return <div className="text-center p-8">Employé non trouvé.</div>;
@@ -377,7 +323,7 @@ export default function EmployeeDetail() {
                   Enregistrer
                 </Button>
              </CardHeader>
-             <CardContent className="h-[80vh] p-0 md:p-4">
+             <CardContent className="h-[80vh] p-0 md:p-2">
                 {/* ✅ NOUVEAU : On insère notre composant de formulaire ici */}
                 <WeekTemplateForm
                   template={weekTemplate}
@@ -388,31 +334,19 @@ export default function EmployeeDetail() {
                   <FullCalendar
                     key={`${selectedDate.year}-${selectedDate.month}`} 
                     initialDate={new Date(selectedDate.year, selectedDate.month - 1, 1)}
-                    plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                    headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' }}
+                    plugins={[dayGridPlugin]}
+                    headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth' }}
                     locale={frLocale}
-                    events={calendarEvents}
                     height="100%"
-                    selectable={true}
-                    dateClick={handleDateClick}
-                    eventClick={handleDateClick}
+                    dayCellContent={renderDayCell}
 
                     datesSet={(dateInfo) => {
-                      // CORRECTION : On utilise `view.calendar.getDate()` qui renvoie une date
-                      // garantie d'être dans le mois actuellement affiché.
                       const currentDate = dateInfo.view.calendar.getDate();
                       const newMonth = currentDate.getMonth() + 1;
                       const newYear = currentDate.getFullYear();
-                      
-                      // --- DÉBOGAGE (gardons-le pour l'instant) ---
-                      console.log(`[DATESET] State AVANT la mise à jour:`, selectedDate);
-                      console.log(`[DATESET] Nouvelle date DÉTECTÉE:`, { month: newMonth, year: newYear });
 
                       if (newMonth !== selectedDate.month || newYear !== selectedDate.year) {
-                        console.log(`[DATESET] MISE À JOUR DE L'ÉTAT demandée.`);
                         setSelectedDate({ month: newMonth, year: newYear });
-                      } else {
-                        console.log(`[DATESET] Pas de mise à jour, la date est la même.`);
                       }
                     }}
                   />
@@ -422,14 +356,6 @@ export default function EmployeeDetail() {
         </TabsContent>
       </Tabs>
 
-      {/* On utilise notre composant ScheduleModal et on lui passe les bons props */}
-      <ScheduleModal 
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        dayData={selectedDayData}
-        onSave={handleModalSave}
-        selectedDate={selectedDate}
-      />
       <SaisieModal
         isOpen={saisieModalOpen}
         onClose={() => setSaisieModalOpen(false)}
