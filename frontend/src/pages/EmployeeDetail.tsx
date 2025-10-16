@@ -1,6 +1,7 @@
 // src/pages/EmployeeDetail.tsx 
 
 
+import { useCallback } from 'react'; // Ajoute useCallback à tes imports de React
 
 import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
@@ -72,13 +73,12 @@ export default function EmployeeDetail() {
 
   const [isLoadingSaisies, setIsLoadingSaisies] = useState(true);
   const [employeeSaisies, setEmployeeSaisies] = useState<any[]>([]);
-  const [pastSaisies, setPastSaisies] = useState<any[]>([]);
-  const [showPastSaisies, setShowPastSaisies] = useState(false);
 
-  const fetchSaisies = async () => {
+
+  const fetchSaisies = useCallback(async () => {
     if (!employeeId) return;
+    setIsLoadingSaisies(true);
     try {
-      setIsLoadingSaisies(true);
       const res = await saisiesApi.getEmployeeMonthlyInputs(employeeId, selectedDate.year, selectedDate.month);
       setEmployeeSaisies(res.data || []);
     } catch (err) {
@@ -86,7 +86,7 @@ export default function EmployeeDetail() {
     } finally {
       setIsLoadingSaisies(false);
     }
-  };
+  }, [employeeId, selectedDate]); // Les dépendances sont correctes
 
   const handleDeleteSaisie = async (id: string) => {
     if (!confirm("Supprimer cette saisie ?")) return;
@@ -106,30 +106,7 @@ export default function EmployeeDetail() {
 
 
 
-  const [monthlyInputs, setMonthlyInputs] = useState<any>(null);
-
-
-  // --- Récupération des saisies ponctuelles du mois pour cet employé ---
-  const fetchMonthlyInputs = async () => {
-    if (!employeeId) return;
-
-    try {
-      const res = await apiClient.get(`/api/employees/${employeeId}/monthly-inputs`, {
-        params: { year: selectedDate.year, month: selectedDate.month },
-      });
-      console.log("[FETCH][monthlyInputs]", res.data);
-      setMonthlyInputs(res.data);
-    } catch (err) {
-      console.error("❌ Erreur lors du chargement des saisies :", err);
-    }
-  };
-
-  // --- Appel automatique au montage et à chaque changement de mois/année
-  useEffect(() => {
-    fetchMonthlyInputs();
-  }, [employeeId, selectedDate.year, selectedDate.month]);
-
-
+  
 
   // Effet pour charger les données générales de la page (infos employé, bulletins...)
   useEffect(() => {
@@ -155,9 +132,6 @@ export default function EmployeeDetail() {
     fetchPageData();
   }, [employeeId]);
 
-  useEffect(() => {
-    fetchMonthlyInputs();
-  }, [employeeId, selectedDate.year, selectedDate.month]);
 
 
   
@@ -187,6 +161,17 @@ export default function EmployeeDetail() {
     updateDayData(updatedDay);
     setShowModal(false);
 };
+  // AJOUTER CETTE FONCTION
+  const handleSaveSaisie = async (data: any[]) => { // Le type 'any' est temporaire pour correspondre au modal
+      try {
+        // Le modal envoie un tableau de payloads, un pour chaque employé sélectionné
+        await saisiesApi.createMonthlyInputs(data);
+        toast({ title: "Succès", description: "Saisie(s) enregistrée(s) avec succès." });
+        fetchSaisies(); // Recharger la liste
+      } catch (err) {
+        toast({ title: "Erreur", description: "Échec de l'enregistrement.", variant: "destructive" });
+      }
+  };
 
   // --- Transformation des données pour l'affichage dans FullCalendar ---
   const calendarEvents = useMemo(() => {
@@ -284,148 +269,46 @@ export default function EmployeeDetail() {
           <Card>
             <CardHeader className="flex flex-row justify-between items-center">
               <div>
-                <CardTitle>Saisies du mois en cours</CardTitle>
-                <CardDescription>
-                  Primes, acomptes et autres variables de{" "}
-                  {new Date(selectedDate.year, selectedDate.month - 1).toLocaleString("fr-FR", {
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </CardDescription>
+                <CardTitle>Saisies de {new Date(selectedDate.year, selectedDate.month - 1).toLocaleString("fr-FR", { month: "long" })}</CardTitle>
+                <CardDescription>Primes, acomptes et autres variables pour la paie de ce mois.</CardDescription>
               </div>
-
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setShowPastSaisies(!showPastSaisies)}>
-                  📅 Saisies passées
-                </Button>
-                <Button onClick={() => setSaisieModalOpen(true)}>+ Ajouter une saisie</Button>
-              </div>
+              <Button onClick={() => setSaisieModalOpen(true)}>+ Ajouter une saisie</Button>
             </CardHeader>
-
             <CardContent>
-              {monthlyInputs ? (
-                <div className="space-y-4">
-                  {monthlyInputs.primes?.length > 0 && (
-                    <div>
-                      <p className="font-semibold">Primes :</p>
-                      <ul className="list-disc ml-6">
-                        {monthlyInputs.primes.map((p: any, i: number) => (
-                          <li key={i}>
-                            {p.prime_id.replace(/_/g, " ")} —{" "}
-                            <span className="text-muted-foreground">
-                              {p.montant.toFixed(2)} €
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>Montant</TableHead>
+                    <TableHead>Soumis à cotisations</TableHead>
+                    <TableHead>Soumis à impôt</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoadingSaisies ? (
+                    <TableRow><TableCell colSpan={5} className="text-center h-24"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+                  ) : employeeSaisies.length > 0 ? employeeSaisies.map((saisie) => (
+                    <TableRow key={saisie.id}>
+                      <TableCell className="font-medium">{saisie.name}</TableCell>
+                      <TableCell>{saisie.amount.toFixed(2)} €</TableCell>
+                      <TableCell>{saisie.is_socially_taxed ? 'Oui' : 'Non'}</TableCell>
+                      <TableCell>{saisie.is_taxable ? 'Oui' : 'Non'}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteSaisie(saisie.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center h-24">Aucune saisie pour ce mois.</TableCell>
+                    </TableRow>
                   )}
-
-                  {monthlyInputs.notes_de_frais?.length > 0 && (
-                    <div>
-                      <p className="font-semibold">Notes de frais :</p>
-                      <ul className="list-disc ml-6">
-                        {monthlyInputs.notes_de_frais.map((n: any, i: number) => (
-                          <li key={i}>
-                            {n.prime_id.replace(/_/g, " ")} —{" "}
-                            <span className="text-muted-foreground">
-                              {n.montant.toFixed(2)} €
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {monthlyInputs.autres?.length > 0 && (
-                    <div>
-                      <p className="font-semibold">Autres :</p>
-                      <ul className="list-disc ml-6">
-                        {monthlyInputs.autres.map((a: any, i: number) => (
-                          <li key={i}>
-                            {a.prime_id.replace(/_/g, " ")} —{" "}
-                            <span className="text-muted-foreground">
-                              {a.montant.toFixed(2)} €
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {monthlyInputs.acompte && (
-                    <div>
-                      <strong>Acompte :</strong> {monthlyInputs.acompte} €
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Aucune saisie ponctuelle pour ce mois.
-                </p>
-              )}
+                </TableBody>
+              </Table>
             </CardContent>
-
           </Card>
-
-          {showPastSaisies && (
-            <Card className="mt-6 border-dashed">
-              <CardHeader>
-                <CardTitle>Saisies passées</CardTitle>
-                <CardDescription>Historique des saisies par mois</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {pastSaisies.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Aucune saisie enregistrée précédemment.</p>
-                ) : (
-                  pastSaisies.map((group) => (
-                    <div key={`${group.year}-${group.month}`} className="mb-4">
-                      <p className="font-semibold">
-                        {new Date(group.year, group.month - 1).toLocaleString("fr-FR", {
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </p>
-                      <ul className="list-disc ml-6 text-sm">
-                        {group.saisies.map((s) => (
-                          <li key={s.id}>
-                            {s.name} — {s.amount} €
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          <SaisieModal
-            isOpen={saisieModalOpen}
-            onClose={() => setSaisieModalOpen(false)}
-            onSave={async (data) => {
-              try {
-                await saisiesApi.createMonthlyInput(
-                  data.map((d) => ({
-                    ...d,
-                    employee_id: employeeId,
-                    year: selectedDate.year,
-                    month: selectedDate.month,
-                  }))
-                );
-                toast({ title: "Succès", description: "Saisie ajoutée avec succès." });
-                fetchSaisies();
-              } catch (err) {
-                toast({
-                  title: "Erreur",
-                  description: "Échec de l'enregistrement de la saisie.",
-                  variant: "destructive",
-                });
-              }
-            }}
-            employees={[employee]}
-            mode="single"
-          />
         </TabsContent>
 
         
@@ -491,29 +374,9 @@ export default function EmployeeDetail() {
       <SaisieModal
         isOpen={saisieModalOpen}
         onClose={() => setSaisieModalOpen(false)}
-        onSave={async (data) => {
-          console.group("[SAISIE MODALE][onSave]");
-          try {
-            if (!employeeId || !selectedDate.year || !selectedDate.month) {
-              console.error("❌ Données manquantes :", { employeeId, selectedDate });
-              return;
-            }
-
-            // Étape 1 : Création côté backend
-            await apiClient.post("/api/monthly-inputs", data);
-
-            // Étape 2 : Rechargement automatique
-            await fetchMonthlyInputs();
-
-            toast({ title: "Succès", description: "Saisie enregistrée avec succès ✅" });
-          } catch (err) {
-            console.error("❌ Erreur lors de la sauvegarde :", err);
-            toast({ title: "Erreur", description: "Échec de l'enregistrement." });
-          }
-          console.groupEnd();
-        }}
-        employees={[employee]}
-        mode="single"
+        onSave={handleSaveSaisie}
+        employees={employee ? [employee] : []} // Le modal attend un tableau d'employés
+        employeeScopeId={employee?.id} // On spécifie que le scope est cet employé
       />
 
 

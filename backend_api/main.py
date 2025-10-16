@@ -1,4 +1,4 @@
-# saas-rh-backend/main.py
+# backend_api/main.py
 
 # ==============================================================================
 # 1. IMPORTATIONS
@@ -25,7 +25,7 @@ import payroll_analyzer
 from enum import Enum 
 import calendar
 from collections import defaultdict
-
+from pydantic import BaseModel, ConfigDict
 
 print("--- LECTURE DU FICHIER main.py ---")
 
@@ -199,10 +199,17 @@ class MonthlyInput(BaseModel):
     name: str
     description: Optional[str] = None
     amount: float
+    is_socially_taxed: bool = True
+    is_taxable: bool = True
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-
-
+    
+    # --- AJOUTEZ CETTE CONFIGURATION ---
+    model_config = ConfigDict(
+        json_encoders={
+            UUID: str  # Dit à Pydantic : "Quand tu trouves un UUID, transforme-le en string"
+        }
+    )
 # --- Modèle de création (pour POST /api/employees/{id}/monthly-inputs) ---
 class MonthlyInputCreate(BaseModel):
     year: int
@@ -521,6 +528,28 @@ def generate_payslip(request: PayslipRequest):
                 if path.exists(): path.unlink()
             except Exception as e:
                 print(f"Erreur lors du nettoyage du fichier {path}: {e}", file=sys.stderr)
+
+@app.delete("/api/payslips/{payslip_id}", status_code=204)
+def delete_payslip(payslip_id: str):
+    """ Supprime un bulletin de paie de la BDD et du stockage. """
+    try:
+        # 1. Récupérer le chemin du fichier PDF avant de supprimer l'entrée de la BDD
+        payslip_to_delete = supabase.table('payslips').select("pdf_storage_path").eq('id', payslip_id).single().execute().data
+        
+        # 2. Supprimer l'entrée de la base de données
+        supabase.table('payslips').delete().eq('id', payslip_id).execute()
+        
+        # 3. Si un fichier est associé, le supprimer du stockage
+        if payslip_to_delete and payslip_to_delete.get('pdf_storage_path'):
+            path = payslip_to_delete['pdf_storage_path']
+            # Le nom du bucket doit être correct, ici "payslips"
+            supabase.storage.from_('payslips').remove([path])
+            
+        return # FastAPI renverra automatiquement un statut 204 No Content
+
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 # --- Gestion des documents (Bulletins, Contrats, Calendriers) ---
 
 @app.get("/api/employees/{employee_id}/payslips", response_model=List[PayslipInfo])
@@ -904,16 +933,6 @@ def get_monthly_inputs(employee_id: str, year: int, month: int):
         "acompte": None,
     }
 
-# @app.post("/api/employees/{employee_id}/monthly-inputs", status_code=201)
-# def create_monthly_input(employee_id: str, payload: MonthlyInputsRequest):
-#     """
-#     Ajoute une nouvelle saisie ponctuelle pour un employé donné.
-#     """
-#     data = payload.model_dump()
-#     data["employee_id"] = employee_id
-
-#     supabase.table("monthly_inputs").insert(data).execute()
-#     return {"status": "success", "message": "Saisie ajoutée avec succès."}
 
 @app.get("/api/monthly-inputs")
 def list_monthly_inputs(year: int, month: int):
@@ -926,31 +945,43 @@ def list_monthly_inputs(year: int, month: int):
     return response.data
 
 
+# saas-rh-backend/main.py -> Remplacer la fonction
+
+# --- Remplace l'endpoint de création par celui-ci ---
 @app.post("/api/monthly-inputs", status_code=201)
-async def create_monthly_input(request: Request):
+def create_monthly_inputs(payload: List[MonthlyInput]):
     """
+    [VERSION DE DÉBOGAGE]
     Crée une ou plusieurs saisies mensuelles dans la table monthly_inputs.
     """
     try:
-        payload = await request.json()
-        print("📥 Payload reçu :", payload)
+        print("\n\n--- [DEBUG] DANS L'ENDPOINT 'create_monthly_inputs' ---", file=sys.stderr)
+        print(f"1. Payload brut reçu et validé par Pydantic ({len(payload)} objet(s)):", file=sys.stderr)
+        
+        # On affiche le type de l'employee_id pour le premier objet pour vérifier
+        if payload:
+            print(f"   -> Type de 'employee_id' après validation Pydantic: {type(payload[0].employee_id)}", file=sys.stderr)
 
-        # Si le frontend envoie une liste d'objets
-        if isinstance(payload, list):
-            for saisie in payload:
-                saisie["soumise_a_csg"] = saisie.get("soumise_a_csg", True)
-            response = supabase.table("monthly_inputs").insert(payload).execute()
-        else:
-            payload["soumise_a_csg"] = payload.get("soumise_a_csg", True)
-            response = supabase.table("monthly_inputs").insert([payload]).execute()
+        # On utilise model_dump(mode='json') qui applique notre configuration 'json_encoders'
+        # pour convertir UUID en string.
+        data_to_insert = [item.model_dump(mode='json', exclude_none=True) for item in payload]
+        
+        print("\n2. Données prêtes pour l'insertion (après model_dump):", file=sys.stderr)
+        print(json.dumps(data_to_insert, indent=2), file=sys.stderr)
+        if data_to_insert:
+             print(f"   -> Type de 'employee_id' après model_dump: {type(data_to_insert[0]['employee_id'])}", file=sys.stderr)
 
-
-        print("✅ Insertion réussie :", response.data)
+        print("\n3. Envoi à Supabase...", file=sys.stderr)
+        response = supabase.table("monthly_inputs").insert(data_to_insert).execute()
+        
+        print("\n4. Réponse de Supabase reçue.", file=sys.stderr)
         return {"status": "success", "inserted": len(response.data)}
 
     except Exception as e:
-        print("❌ Erreur create_monthly_input :", e)
+        print("❌ ERREUR dans create_monthly_inputs :", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
         raise HTTPException(status_code=500, detail=str(e))
+    
 
 
 @app.delete("/api/monthly-inputs/{input_id}")
@@ -1012,4 +1043,16 @@ def delete_employee_monthly_input(employee_id: str, input_id: str):
         return {"status": "success"}
     except Exception as e:
         print("❌ Erreur delete_employee_monthly_input :", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/primes-catalogue")
+def get_primes_catalogue():
+    """ Lit et retourne le contenu du fichier primes.json. """
+    try:
+        primes_path = PATH_TO_PAYROLL_ENGINE / "data" / "primes.json"
+        primes_data = json.loads(primes_path.read_text(encoding="utf-8"))
+        return primes_data.get("primes", [])
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Fichier primes.json introuvable.")
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

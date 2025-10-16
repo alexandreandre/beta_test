@@ -19,7 +19,7 @@ def _calculer_net_imposable(
     remuneration_heures_supp: float # <-- NOUVEAU: On passe le montant des HS
 ) -> float:
     
-    # ... (les premières lignes pour calculer montant_csg_non_deductible et part_patronale_mutuelle ne changent pas)
+
     montant_csg_non_deductible = 0.0
     for ligne in lignes_cotisations:
         libelle = ligne.get('libelle', '').lower()

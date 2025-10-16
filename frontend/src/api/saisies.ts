@@ -1,6 +1,15 @@
 // src/api/saisies.ts
 import apiClient from './apiClient';
 
+
+// --- INTERFACES ---
+export interface PrimeFromCatalogue {
+  id: string;
+  libelle: string;
+  soumise_a_cotisations: boolean;
+  soumise_a_impot: boolean;
+}
+
 export interface MonthlyInput {
   id: string;
   employee_id: string;
@@ -9,22 +18,30 @@ export interface MonthlyInput {
   name: string;
   description?: string;
   amount: number;
-  soumise_a_csg?: boolean;
+  is_socially_taxed: boolean;
+  is_taxable: boolean;
   created_at: string;
   updated_at: string;
 }
 
-// --- API Monthly Inputs ---
+export type MonthlyInputCreate = Omit<MonthlyInput, 'id'>;
+
+// --- FONCTIONS D'API ---
+
+export const getPrimesCatalogue = () => {
+  return apiClient.get<PrimeFromCatalogue[]>('/api/primes-catalogue');
+};
+
+export const createMonthlyInputs = (data: MonthlyInputCreate[]) => {
+  return apiClient.post('/api/monthly-inputs', data);
+};
+
+
 export const getAllMonthlyInputs = (year: number, month: number) => {
   return apiClient.get<MonthlyInput[]>('/api/monthly-inputs', { params: { year, month } });
 };
 
-export const createMonthlyInput = (data: Omit<MonthlyInput, 'id' | 'created_at' | 'updated_at'>[]) => {
-  // envoi brut du tableau, sans l'encapsuler dans un objet
-  return apiClient.post('/api/monthly-inputs', data, {
-    headers: { 'Content-Type': 'application/json' },
-  });
-};
+
 
 
 export const deleteMonthlyInput = (id: string) => {
