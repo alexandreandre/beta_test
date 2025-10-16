@@ -323,7 +323,7 @@ export default function EmployeeDetail() {
                   Enregistrer
                 </Button>
              </CardHeader>
-             <CardContent className="h-[80vh] p-0 md:p-2">
+             <CardContent className="p-0 md:p-2">
                 {/* ✅ NOUVEAU : On insère notre composant de formulaire ici */}
                 <WeekTemplateForm
                   template={weekTemplate}
@@ -337,7 +337,7 @@ export default function EmployeeDetail() {
                     plugins={[dayGridPlugin]}
                     headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth' }}
                     locale={frLocale}
-                    height="100%"
+                    height="auto"
                     dayCellContent={renderDayCell}
 
                     datesSet={(dateInfo) => {
