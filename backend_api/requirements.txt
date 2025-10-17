@@ -16,3 +16,5 @@ weasyprint
 
 # --- Utilities ---
 requests
+
+python-multipart

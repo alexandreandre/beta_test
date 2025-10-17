@@ -2,7 +2,7 @@
 
 from fastapi import Request, HTTPException
 from core.config import app
-from api.routers import employees, dashboard, payslips, schedules, monthly_inputs
+from api.routers import employees, dashboard, payslips, schedules, monthly_inputs, auth
 
 print("--- LECTURE DU FICHIER main.py (POINT D'ENTRÉE) ---")
 
@@ -12,6 +12,7 @@ app.include_router(dashboard.router)
 app.include_router(payslips.router)
 app.include_router(schedules.router)
 app.include_router(monthly_inputs.router)
+app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 
 
 @app.get("/")

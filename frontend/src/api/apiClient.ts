@@ -10,17 +10,21 @@ const apiClient = axios.create({
 // Intercepteur pour LOGGUER chaque requête avant son envoi
 apiClient.interceptors.request.use(
   (config) => {
-    console.log('%c🚀 REQUÊTE SORTANTE:', 'color: #0077cc;', {
-      method: config.method?.toUpperCase(),
-      url: config.baseURL + config.url,
-      headers: config.headers,
-      data: config.data,
-    });
-    
     const token = localStorage.getItem('authToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Si un token existe ET qu'un header Authorization n'est pas déjà défini pour cette requête, on l'ajoute.
+    if (token && !config.headers.Authorization) {
+        config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // --- NOUVEAU LOG PLUS PRÉCIS ---
+    console.groupCollapsed(`%c🚀 REQUÊTE SORTANTE: ${config.method?.toUpperCase()} ${config.url}`, 'color: #0077cc; font-weight: bold;');
+    console.log('%cURL:', 'color: #0077cc;', `${config.baseURL}${config.url}`);
+    console.log('%cHEADER Authorization:', 'color: #0077cc;', config.headers.Authorization || '--- NON DÉFINI ---');
+    console.log('%cTOUS LES HEADERS:', 'color: #0077cc;', config.headers);
+    console.log('%cDATA:', 'color: #0077cc;', config.data);
+    console.groupEnd();
+    // --- FIN DU NOUVEAU LOG ---
+
     return config;
   },
   (error) => {
