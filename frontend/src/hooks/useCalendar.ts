@@ -204,22 +204,12 @@ export function useCalendar(employeeId: string | undefined) {
    * @param isCtrlOrMetaKey Vrai si la touche Ctrl ou Cmd était pressée.
    */
   const handleDaySelection = (dayNumber: number, isCtrlOrMetaKey: boolean) => {
-    if (isCtrlOrMetaKey) {
-      // Ajoute ou retire le jour de la sélection existante
-      setSelectedDays(prev =>
-        prev.includes(dayNumber)
-          ? prev.filter(d => d !== dayNumber)
-          : [...prev, dayNumber]
-      );
-    } else {
-      // Si on clique sans Ctrl/Cmd, on sélectionne uniquement ce jour
-      // Si on clique à nouveau sur le même jour (déjà seul sélectionné), on le désélectionne
-      if (selectedDays.length === 1 && selectedDays[0] === dayNumber) {
-        setSelectedDays([]);
-      } else {
-        setSelectedDays([dayNumber]);
-      }
-    }
+    // Avec les cases à cocher, la logique est toujours d'ajouter ou retirer.
+    setSelectedDays(prev =>
+      prev.includes(dayNumber)
+        ? prev.filter(d => d !== dayNumber)
+        : [...prev, dayNumber]
+    );
   };
 
   /**

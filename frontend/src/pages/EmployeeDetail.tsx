@@ -94,7 +94,8 @@ interface BulkActionPanelProps {
 
 function BulkActionPanel({ selectedCount, onBulkUpdate, onClearSelection }: BulkActionPanelProps) {
   const [type, setType] = useState('');
-  const [hours, setHours] = useState('');
+  const [plannedHours, setPlannedHours] = useState('');
+  const [actualHours, setActualHours] = useState('');
 
   const handleApply = () => {
     const updateData: Partial<Omit<DayData, 'jour'>> = {};
@@ -108,16 +109,23 @@ function BulkActionPanel({ selectedCount, onBulkUpdate, onClearSelection }: Bulk
       hasUpdate = true;
     }
 
-    if (hours.trim() !== '') {
-      const parsedHours = parseFloat(hours);
-      if (!isNaN(parsedHours)) {
-        updateData.heures_prevues = parsedHours;
-        updateData.heures_faites = parsedHours;
-        if (type === '' && parsedHours > 0) {
-          updateData.type = 'travail';
-        }
-        hasUpdate = true;
+    const parsedPlanned = parseFloat(plannedHours);
+    if (!isNaN(parsedPlanned)) {
+      updateData.heures_prevues = parsedPlanned;
+      // Si on met des heures prévues, on s'assure que le type est 'travail' si non défini
+      if (type === '' && parsedPlanned > 0) {
+        updateData.type = 'travail';
       }
+      hasUpdate = true;
+    }
+
+    const parsedActual = parseFloat(actualHours);
+    if (!isNaN(parsedActual)) {
+      updateData.heures_faites = parsedActual;
+      if (type === '' && parsedActual > 0 && !updateData.type) {
+          updateData.type = 'travail';
+      }
+      hasUpdate = true;
     }
 
     if (hasUpdate) {
@@ -126,12 +134,12 @@ function BulkActionPanel({ selectedCount, onBulkUpdate, onClearSelection }: Bulk
   };
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-card p-3 border rounded-lg shadow-2xl flex items-center gap-4 animate-in fade-in-90 slide-in-from-bottom-10">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-card p-3 border rounded-lg shadow-2xl flex items-center gap-6 animate-in fade-in-90 slide-in-from-bottom-10">
       <p className="text-sm font-medium">{selectedCount} jours sélectionnés</p>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-4">
         <Label htmlFor="bulk-type" className="text-xs">Marquer comme:</Label>
         <Select value={type} onValueChange={setType}>
-          <SelectTrigger id="bulk-type" className="h-8 w-[120px] text-xs"><SelectValue placeholder="Type..." /></SelectTrigger>
+          <SelectTrigger id="bulk-type" className="h-8 w-[130px] text-xs"><SelectValue placeholder="Travail" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="travail">Travail</SelectItem>
             <SelectItem value="conge">Congé</SelectItem>
@@ -140,8 +148,10 @@ function BulkActionPanel({ selectedCount, onBulkUpdate, onClearSelection }: Bulk
             <SelectItem value="weekend">Weekend</SelectItem>
           </SelectContent>
         </Select>
-        <Label htmlFor="bulk-hours" className="text-xs">Heures:</Label>
-        <Input id="bulk-hours" type="number" value={hours} onChange={e => setHours(e.target.value)} placeholder="ex: 8" className="h-8 w-20 text-xs" />
+        <Label htmlFor="bulk-planned-hours" className="text-xs">H. prévues:</Label>
+        <Input id="bulk-planned-hours" type="number" value={plannedHours} onChange={e => setPlannedHours(e.target.value)} placeholder="ex: 8" className="h-8 w-20 text-xs" />
+        <Label htmlFor="bulk-actual-hours" className="text-xs">H. faites:</Label>
+        <Input id="bulk-actual-hours" type="number" value={actualHours} onChange={e => setActualHours(e.target.value)} placeholder="ex: 7.5" className="h-8 w-20 text-xs" />
       </div>
       <Button size="sm" onClick={handleApply}>Appliquer</Button>
       <Button size="sm" variant="ghost" onClick={onClearSelection}>Annuler</Button>
@@ -276,6 +286,20 @@ export default function EmployeeDetail() {
   
   return (
     <div className="space-y-6">
+      {/* --- AJOUT DE STYLE POUR FULLCALENDAR --- */}
+      {/* 
+        Ce bloc de style surcharge le CSS par défaut de FullCalendar.
+        - On supprime le padding des cellules du tableau (td).
+        - On s'assure que notre contenu personnalisé (CalendarDayCell) prend toute la hauteur.
+      */}
+      <style>{`
+        .fc-daygrid-day-frame {
+          height: 100%;
+        }
+        .fc .fc-daygrid-day-cushion {
+          padding: 0 !important;
+        }
+      `}</style>
       <Link to="/employees" className="flex items-center text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="mr-2 h-4 w-4" /> Retour à la liste des salariés
       </Link>
@@ -409,7 +433,7 @@ export default function EmployeeDetail() {
                     plugins={[dayGridPlugin]}
                     headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth' }}
                     locale={frLocale}
-                    height="auto"
+                    dayCellClassNames="fc-daygrid-day-cushion"
                     dayCellContent={renderDayCell}
 
                     datesSet={(dateInfo) => {

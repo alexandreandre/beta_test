@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Calendar, Clock } from 'lucide-react';
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface CalendarDayCellProps {
   arg: DayCellContentArg;
@@ -46,10 +47,6 @@ export function CalendarDayCell({ arg, plannedCalendar, actualHours, updateDayDa
         <span className="text-muted-foreground/30">{arg.dayNumberText}</span>
       </div>);
   }
-
-  const handleCellClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    onDaySelect?.(dayNumber, e.ctrlKey || e.metaKey);
-  };
 
   const handleTypeChange = (newType: string) => {
     // Si le jour n'existe pas encore dans le calendrier, on le crée
@@ -97,15 +94,13 @@ export function CalendarDayCell({ arg, plannedCalendar, actualHours, updateDayDa
   return (
     <div 
       className={cn(
-        "flex flex-col h-full p-1.5 rounded-md transition-all duration-200 border-2 group cursor-pointer",
-        "hover:border-primary/30 hover:shadow-lg hover:bg-card",
-        isSelected ? "border-primary bg-primary/5" : "border-transparent"
+        "flex flex-col h-full p-1.5 rounded-md transition-all duration-200 border-2 border-transparent group",
+        "hover:border-primary/30 hover:shadow-lg hover:bg-card"
       )}
-      onClick={handleCellClick}
     >
       <div className="flex items-center justify-between mb-1">
         <div className={cn(
-          "font-bold text-xs rounded-full h-6 w-6 flex items-center justify-center transition-all", 
+          "font-bold text-xs rounded-full h-6 w-6 flex items-center justify-center transition-all",
           isToday ? "bg-primary text-primary-foreground" : "text-foreground group-hover:text-primary"
         )}>
           {arg.dayNumberText}
@@ -142,6 +137,15 @@ export function CalendarDayCell({ arg, plannedCalendar, actualHours, updateDayDa
             className="h-7 text-xs p-1 pl-5 bg-teal-500/5 border-0 rounded-md focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-teal-500 focus-visible:ring-offset-0" 
           />
         </div>
+      </div>
+
+      <div className="flex justify-end pt-1">
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={() => onDaySelect?.(dayNumber, false)}
+          aria-label={`Sélectionner le jour ${dayNumber}`}
+          className="h-4 w-4"
+        />
       </div>
     </div>
   );

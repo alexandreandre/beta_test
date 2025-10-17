@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import apiClient from '../api/apiClient';
 
 import { useForm } from "react-hook-form";
@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, Eye, Loader2 } from "lucide-react";
+import { Search, Plus, Eye, Loader2, ChevronRight } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea"; // Pour les champs JSON
 import { Checkbox } from "@/components/ui/checkbox";
@@ -159,6 +159,7 @@ export default function Employees() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  const navigate = useNavigate();
   // Formulaire avec toutes les valeurs par défaut
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -578,28 +579,26 @@ export default function Employees() {
       <Card>
         <CardHeader><CardTitle>Liste des Salariés</CardTitle></CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader><TableRow><TableHead>Salarié</TableHead><TableHead>Poste</TableHead><TableHead>Contrat</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+          <Table className="table-fixed">
+            <TableHeader><TableRow><TableHead className="w-[40%]">Salarié</TableHead><TableHead className="w-[30%]">Poste</TableHead><TableHead className="w-[25%]">Contrat</TableHead><TableHead className="w-[5%]"></TableHead></TableRow></TableHeader>
             <TableBody>
-              {loading && <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin" /></TableCell></TableRow>}
-              {error && <TableRow><TableCell colSpan={4} className="h-24 text-center text-red-500">{error}</TableCell></TableRow>}
+              {loading && <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>}
+              {error && <TableRow><TableCell colSpan={4} className="h-24 text-center text-destructive">{error}</TableCell></TableRow>}
               {!loading && !error && filteredEmployees.map((employee) => (
-                <TableRow key={employee.id}>
+                <TableRow key={employee.id} onClick={() => navigate(`/employees/${employee.id}`)} className="cursor-pointer hover:bg-muted/50">
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8"><AvatarFallback>{employee.first_name.charAt(0)}{employee.last_name.charAt(0)}</AvatarFallback></Avatar>
                       <div>
                         <p className="font-medium">{employee.first_name} {employee.last_name}</p>
-                        <p className="text-xs text-muted-foreground">Embauché le {employee.hire_date ? new Date(employee.hire_date).toLocaleDateString('fr-FR') : 'N/A'}</p>
+                        <p className="text-xs text-muted-foreground">Entrée: {employee.hire_date ? new Date(employee.hire_date).toLocaleDateString('fr-FR') : 'N/A'}</p>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>{employee.job_title || 'N/A'}</TableCell>
                   <TableCell>{employee.contract_type ? getContractBadge(employee.contract_type) : 'N/A'}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" asChild>
-                      <Link to={`/employees/${employee.id}`}><Eye className="h-4 w-4" /></Link>
-                    </Button>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ))}
