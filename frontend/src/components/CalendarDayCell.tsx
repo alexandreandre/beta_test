@@ -6,7 +6,7 @@ import { DayData } from '@/components/ScheduleModal';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 import { Calendar, Clock } from 'lucide-react';
 
 interface CalendarDayCellProps {
@@ -14,6 +14,9 @@ interface CalendarDayCellProps {
   plannedCalendar: PlannedEventData[];
   actualHours: ActualHoursData[];
   updateDayData: (day: Partial<DayData>) => void;
+  // --- NOUVELLES PROPS POUR LA SÉLECTION ---
+  selectedDays?: number[];
+  onDaySelect?: (dayNumber: number, isCtrlOrMetaKey: boolean) => void;
   selectedDate: { month: number; year: number };
 }
 
@@ -25,7 +28,7 @@ const typeColors: { [key: string]: string } = {
   weekend: "bg-gray-100 text-gray-500",
 };
 
-export function CalendarDayCell({ arg, plannedCalendar, actualHours, updateDayData, selectedDate }: CalendarDayCellProps) {
+export function CalendarDayCell({ arg, plannedCalendar, actualHours, updateDayData, selectedDays = [], onDaySelect, selectedDate }: CalendarDayCellProps) {
   const dayNumber = arg.date.getDate();
 
   const plannedDay = plannedCalendar.find(d => d.jour === dayNumber);
@@ -34,6 +37,8 @@ export function CalendarDayCell({ arg, plannedCalendar, actualHours, updateDayDa
   // Vérifie si le jour de la cellule appartient au mois actuellement sélectionné.
   const isCurrentMonth = arg.date.getMonth() + 1 === selectedDate.month && arg.date.getFullYear() === selectedDate.year;
 
+  const isSelected = isCurrentMonth && selectedDays.includes(dayNumber);
+
   // Pour les jours hors du mois courant, on affiche juste le numéro grisé.
   if (!isCurrentMonth) {
     return (
@@ -41,6 +46,10 @@ export function CalendarDayCell({ arg, plannedCalendar, actualHours, updateDayDa
         <span className="text-muted-foreground/30">{arg.dayNumberText}</span>
       </div>);
   }
+
+  const handleCellClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    onDaySelect?.(dayNumber, e.ctrlKey || e.metaKey);
+  };
 
   const handleTypeChange = (newType: string) => {
     // Si le jour n'existe pas encore dans le calendrier, on le crée
@@ -88,9 +97,11 @@ export function CalendarDayCell({ arg, plannedCalendar, actualHours, updateDayDa
   return (
     <div 
       className={cn(
-        "flex flex-col h-full p-1.5 rounded-md transition-all duration-200 border border-transparent group",
-        "hover:border-primary/30 hover:shadow-lg hover:bg-card"
+        "flex flex-col h-full p-1.5 rounded-md transition-all duration-200 border-2 group cursor-pointer",
+        "hover:border-primary/30 hover:shadow-lg hover:bg-card",
+        isSelected ? "border-primary bg-primary/5" : "border-transparent"
       )}
+      onClick={handleCellClick}
     >
       <div className="flex items-center justify-between mb-1">
         <div className={cn(

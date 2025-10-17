@@ -46,6 +46,9 @@ export function useCalendar(employeeId: string | undefined) {
   const [isSaving, setIsSaving] = useState(false);
 
   const [editingDay, setEditingDay] = useState<number | null>(null);
+  
+  // --- NOUVEAUX ÉTATS POUR LA SÉLECTION MULTIPLE ---
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
 
   // --- LOGIQUE D'ACCÈS AUX DONNÉES ---
   
@@ -192,6 +195,50 @@ export function useCalendar(employeeId: string | undefined) {
           })
       );
   };
+  
+  // --- NOUVELLES FONCTIONS POUR LA SÉLECTION MULTIPLE ---
+
+  /**
+   * Gère la sélection/désélection d'un jour.
+   * @param dayNumber Le numéro du jour cliqué.
+   * @param isCtrlOrMetaKey Vrai si la touche Ctrl ou Cmd était pressée.
+   */
+  const handleDaySelection = (dayNumber: number, isCtrlOrMetaKey: boolean) => {
+    if (isCtrlOrMetaKey) {
+      // Ajoute ou retire le jour de la sélection existante
+      setSelectedDays(prev =>
+        prev.includes(dayNumber)
+          ? prev.filter(d => d !== dayNumber)
+          : [...prev, dayNumber]
+      );
+    } else {
+      // Si on clique sans Ctrl/Cmd, on sélectionne uniquement ce jour
+      // Si on clique à nouveau sur le même jour (déjà seul sélectionné), on le désélectionne
+      if (selectedDays.length === 1 && selectedDays[0] === dayNumber) {
+        setSelectedDays([]);
+      } else {
+        setSelectedDays([dayNumber]);
+      }
+    }
+  };
+
+  /**
+   * Applique une mise à jour à tous les jours sélectionnés.
+   * @param updateData Les données partielles à appliquer.
+   */
+  const bulkUpdateDays = (updateData: Partial<Omit<DayData, 'jour'>>) => {
+    if (selectedDays.length === 0) return;
+
+    selectedDays.forEach(dayNumber => {
+      updateDayData({ jour: dayNumber, ...updateData });
+    });
+
+    toast({
+      title: "Mise à jour groupée",
+      description: `${selectedDays.length} jours ont été modifiés.`,
+    });
+    setSelectedDays([]); // On désélectionne après l'action
+  };
 
 
 
@@ -212,5 +259,9 @@ export function useCalendar(employeeId: string | undefined) {
     applyWeekTemplate, 
     editingDay,
     setEditingDay,
+    selectedDays,
+    setSelectedDays,
+    handleDaySelection,
+    bulkUpdateDays,
   };
 }

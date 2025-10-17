@@ -1,7 +1,6 @@
 // src/pages/EmployeeDetail.tsx 
 
-
-import { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import apiClient from "@/api/apiClient";
 
@@ -16,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SaisieModal } from "@/components/SaisieModal"; 
 import { Download, Calendar as CalendarIcon, FileText, Loader2, ArrowLeft, Save, ClipboardEdit } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"; // prettier-ignore
 import { Trash2 } from "lucide-react";
 import * as saisiesApi from "@/api/saisies"; // ✅ On importe le nouveau type
 import { useCalendar, WeekTemplate } from "@/hooks/useCalendar"; // ✅ On importe le nouveau type
@@ -24,6 +23,7 @@ import { Input } from "@/components/ui/input"; // ✅ On importe l'Input
 import { Label } from "@/components/ui/label";   // ✅ On importe le Label
 import { ArrowRight } from "lucide-react";       // ✅ On importe une icône
 import { toast } from "@/components/ui/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
 // --- Imports FullCalendar ---
@@ -83,6 +83,71 @@ function WeekTemplateForm({ template, setTemplate, onApply }: WeekTemplateFormPr
   );
 }
 // -----------------------------------------------------------------------------
+
+// --- NOUVEAU COMPOSANT : Panneau d'actions groupées ---
+// -----------------------------------------------------------------------------
+interface BulkActionPanelProps {
+  selectedCount: number;
+  onBulkUpdate: (data: Partial<Omit<DayData, 'jour'>>) => void;
+  onClearSelection: () => void;
+}
+
+function BulkActionPanel({ selectedCount, onBulkUpdate, onClearSelection }: BulkActionPanelProps) {
+  const [type, setType] = useState('');
+  const [hours, setHours] = useState('');
+
+  const handleApply = () => {
+    const updateData: Partial<Omit<DayData, 'jour'>> = {};
+    let hasUpdate = false;
+
+    if (type) {
+      updateData.type = type;
+      if (type !== 'travail') {
+        updateData.heures_prevues = null;
+      }
+      hasUpdate = true;
+    }
+
+    if (hours.trim() !== '') {
+      const parsedHours = parseFloat(hours);
+      if (!isNaN(parsedHours)) {
+        updateData.heures_prevues = parsedHours;
+        updateData.heures_faites = parsedHours;
+        if (type === '' && parsedHours > 0) {
+          updateData.type = 'travail';
+        }
+        hasUpdate = true;
+      }
+    }
+
+    if (hasUpdate) {
+      onBulkUpdate(updateData);
+    }
+  };
+
+  return (
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-card p-3 border rounded-lg shadow-2xl flex items-center gap-4 animate-in fade-in-90 slide-in-from-bottom-10">
+      <p className="text-sm font-medium">{selectedCount} jours sélectionnés</p>
+      <div className="flex items-center gap-2">
+        <Label htmlFor="bulk-type" className="text-xs">Marquer comme:</Label>
+        <Select value={type} onValueChange={setType}>
+          <SelectTrigger id="bulk-type" className="h-8 w-[120px] text-xs"><SelectValue placeholder="Type..." /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="travail">Travail</SelectItem>
+            <SelectItem value="conge">Congé</SelectItem>
+            <SelectItem value="ferie">Férié</SelectItem>
+            <SelectItem value="arret_maladie">Arrêt Maladie</SelectItem>
+            <SelectItem value="weekend">Weekend</SelectItem>
+          </SelectContent>
+        </Select>
+        <Label htmlFor="bulk-hours" className="text-xs">Heures:</Label>
+        <Input id="bulk-hours" type="number" value={hours} onChange={e => setHours(e.target.value)} placeholder="ex: 8" className="h-8 w-20 text-xs" />
+      </div>
+      <Button size="sm" onClick={handleApply}>Appliquer</Button>
+      <Button size="sm" variant="ghost" onClick={onClearSelection}>Annuler</Button>
+    </div>
+  );
+}
 export default function EmployeeDetail() {
   const { employeeId } = useParams<{ employeeId: string }>();
   
@@ -101,6 +166,10 @@ export default function EmployeeDetail() {
     weekTemplate,
     setWeekTemplate,
     applyWeekTemplate,
+    selectedDays,
+    setSelectedDays,
+    handleDaySelection,
+    bulkUpdateDays,
   } = useCalendar(employeeId);
 
   // --- États spécifiques à la page (hors calendrier) ---
@@ -189,14 +258,17 @@ export default function EmployeeDetail() {
 
   // --- Handler pour le rendu personnalisé des cellules ---
   const renderDayCell = useCallback((arg: DayCellContentArg) => {
-    return <CalendarDayCell 
-      arg={arg}
-      plannedCalendar={plannedCalendar}
-      actualHours={actualHours}
-      updateDayData={updateDayData}
-      selectedDate={selectedDate}
-    />
-  }, [plannedCalendar, actualHours, updateDayData, selectedDate]);
+    // Le rendu de la cellule est maintenant dépendant de la sélection
+    return React.cloneElement(
+      <CalendarDayCell 
+        arg={arg}
+        plannedCalendar={plannedCalendar}
+        actualHours={actualHours}
+        updateDayData={updateDayData}
+        selectedDate={selectedDate}
+      />, { selectedDays, onDaySelect: handleDaySelection }
+    );
+  }, [plannedCalendar, actualHours, updateDayData, selectedDate, selectedDays, handleDaySelection]);
 
   if (isPageLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="h-12 w-12 animate-spin"/></div>;
   if (!employee) return <div className="text-center p-8">Employé non trouvé.</div>;
@@ -355,6 +427,15 @@ export default function EmployeeDetail() {
            </Card>
         </TabsContent>
       </Tabs>
+
+      {/* --- AFFICHAGE CONDITIONNEL DU PANNEAU D'ACTIONS --- */}
+      {selectedDays.length > 1 && (
+        <BulkActionPanel
+          selectedCount={selectedDays.length}
+          onBulkUpdate={bulkUpdateDays}
+          onClearSelection={() => setSelectedDays([])}
+        />
+      )}
 
       <SaisieModal
         isOpen={saisieModalOpen}
