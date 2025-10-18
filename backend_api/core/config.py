@@ -17,15 +17,20 @@ app = FastAPI(title="API du SaaS RH")
 print("--- CONFIGURATION CORS ---")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8080"],
+    # Autorise les requêtes depuis votre frontend Vue.js
+    allow_origins=["http://localhost:8080"], 
     allow_credentials=True,
+    # Autorise toutes les méthodes (GET, POST, etc.)
     allow_methods=["*"],
+    # Autorise tous les en-têtes (y compris Authorization)
     allow_headers=["*"],
+    # Empêche les requêtes OPTIONS d'aller plus loin que le middleware
+    max_age=3600, # Optionnel: met en cache la réponse OPTIONS pour 1h
 )
 
 # --- Connexion à Supabase ---
 supabase_url = os.getenv("SUPABASE_URL")
-supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
+supabase_key = os.getenv("SUPABASE_KEY")
 if not supabase_url or not supabase_key:
     raise RuntimeError("Variables d'environnement SUPABASE manquantes.")
 supabase: Client = create_client(supabase_url, supabase_key)

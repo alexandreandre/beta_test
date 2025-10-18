@@ -26,6 +26,7 @@ import EmployeeDashboard from './pages/employee/Dashboard';
 import ProfilePage from './pages/employee/Profile';
 import PayslipsPage from './pages/employee/Payslips';
 import AbsencesPage from './pages/employee/Absences';
+import EmployeeCalendarPage from './pages/employee/Calendar'; // NOUVEAU
 import ExpensesPage from './pages/employee/Expenses';
 import DocumentsPage from './pages/employee/Documents';
 // Page par défaut
@@ -72,6 +73,7 @@ function ProtectedRoutes() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/payslips" element={<PayslipsPage />} />
           <Route path="/absences" element={<AbsencesPage />} />
+          <Route path="/calendar" element={<EmployeeCalendarPage />} />
           <Route path="/expenses" element={<ExpensesPage />} />
           <Route path="/documents" element={<DocumentsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

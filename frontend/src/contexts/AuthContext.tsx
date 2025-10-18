@@ -3,7 +3,12 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import apiClient from '@/api/apiClient';
 
-interface User { id: string; email: string; role: 'rh' | 'salarie'; }
+interface User {
+  id: string;
+  email: string;
+  role: 'rh' | 'salarie';
+  first_name: string; // On ajoute le prénom
+}
 interface AuthContextType {
   user: User | null;
   login: (token: string) => Promise<void>;

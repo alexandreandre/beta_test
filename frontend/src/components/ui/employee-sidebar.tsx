@@ -7,9 +7,10 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { to: "/", label: "Tableau de bord", icon: Home },
-  { to: "/profile", label: "Mon Profil", icon: User },
+  { to: "/profile", label: "Profil", icon: User },
   { to: "/payslips", label: "Rémunération", icon: Wallet },
   { to: "/absences", label: "Congés & Absences", icon: Calendar },
+  { to: "/calendar", label: "Calendrier", icon: Calendar },
   { to: "/expenses", label: "Notes de Frais", icon: Receipt },
   { to: "/documents", label: "Mes Documents", icon: FolderKanban },
 ];
